@@ -1,0 +1,17 @@
+[package]
+name = "traceroute"
+version = "0.1.0"
+authors = ["Lucas Riutzel <lriutzel@gmail.com>"]
+edition = "2018"
+description = "Network diagnostic tool to capture route and transit delay of packets."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+structopt = "0.3"
+url = "2.2"
+pnet = "0.26"
+pnet_macros_support = "0.26"
+rand = "0.7"
+resolve = "0.2"
+petgraph = "0.5.1"
