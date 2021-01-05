@@ -7,7 +7,6 @@ extern crate petgraph;
 
 pub mod utils;
 
-use url::Host;
 use std::time::Instant;
 use std::time::Duration;
 
@@ -28,8 +27,8 @@ pub use utils::TracerouteResults;
 pub use utils::Options;
 pub use utils::Protocol;
 pub use utils::{Probe, ProbeResponse};
-pub use utils::Hop;
-use utils::packet_builder::PacketBuilderIpv4;
+use utils::get_default_source_ip;
+use utils::packet_builder::build_ipv4_probe;
 
 use petgraph::graphmap::DiGraphMap;
 use utils::{Node, Edge};
@@ -55,8 +54,6 @@ impl Traceroute {
         let (mut tx, mut rx) = transport_channel(4096, protocol)
                                     .expect("Can't get channel");
 
-        let mut graph = DiGraphMap::<Node, Edge>::new();
-
         let targets = match self.options.target_ips() {
             Ok(ips) => ips,
             Err(e) => {
@@ -65,124 +62,64 @@ impl Traceroute {
             }
         };
 
-        for target in targets {
-            let trace_graph = self.trace(&mut tx, &mut rx, target);
-            graph.extend(trace_graph.all_edges());
-        }
+        let results = targets.iter()
+                         .map(|target| self.trace(&mut tx, &mut rx, *target))
+                         // TODO look into fold_first when it stablizes
+                         .fold(None, |prev: Option<TracerouteResults>, cur| {
+                             match prev {
+                                 Some(mut graph) => {
+                                     if let Ok(trace) = cur {
+                                        graph.extend(trace.all_edges());
+                                     }
+                                     Some(graph)
+                                 }
+                                 None => cur.ok(),
+                             }
+                         });
 
-        Ok(TracerouteResults::new(graph))
+
+        results.ok_or("Idk, it failed")
     }
 
     /// Run a trace against a specific single target
-    pub fn trace(&self, tx: &mut TransportSender, rx: &mut TransportReceiver, target: Ipv4Addr) -> DiGraphMap<Node, Edge> {
+    pub fn trace(&self, tx: &mut TransportSender, rx: &mut TransportReceiver, target: Ipv4Addr) -> Result<TracerouteResults, &'static str> {
         eprintln!("Start trace for {}", target);
 
+        let source = get_default_source_ip();
+
+        let probes = match self.sweep(&source, tx, target) {
+            Ok(probes) => probes,
+            Err(e) => return Err(e),
+        };
+
         let timeout = Duration::new(1, 0);
-
-        let mut packet_builder = PacketBuilderIpv4::new();
-
-        let mut sent_packets = HashMap::new();
-
-        // Don't bother the host with more probes than are required. We want to be good
-        // neighbors
-        //let mut target_ttl = None;
-        //if Some(ttl) = target_ttl {
-        //    max_ttl = ttl;
-        //}
-
-        let mut probes = self.sweep(&mut packet_builder, tx, target);
-        while let Some(probe) = probes.pop() {
-            sent_packets.insert(probe.id, probe);
-        }
-
         let responses = Self::listen(rx, timeout);
 
-        Self::match_packets(sent_packets, responses, packet_builder.ip(), IpAddr::V4(target))
+
+        Ok(TracerouteResults::new(probes, responses, IpAddr::V4(source), IpAddr::V4(target)))
     }
 
-    // TODO what to do when target isn't found
-    /// Correlate sent and received packets
-    fn match_packets(mut sent: HashMap::<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr) -> DiGraphMap<Node, Edge> {
-        let mut target_ttl = None;
-        let mut results = vec![];
-        for response in recv {
-            if let Some(probe) = sent.remove(&response.id) {
-                let hop = Hop::new(probe.ttl, source, probe.instant, response.source, response.instant, probe.flowhash);
-                if None == target_ttl && response.source == target {
-                    target_ttl = Some(probe.ttl);
-                }
-                results.push(hop);
-            }
-        }
-
-        match target_ttl {
-            Some(ttl) => eprintln!("Target TTL is {}", ttl),
-            None => eprintln!("Target wasn't found"),
-        }
-
-        // Loop through unmatch probes
-        //for (_, probe) in sent {
-        //    if let Some(ttl) = target_ttl {
-        //        if probe.ttl > ttl {
-        //            break;
-        //        }
-        //    }
-
-        //    println!("{:?}", probe);
-        //}
-
-
-
-        let mut graph = DiGraphMap::<Node, Edge>::new();
-        let source = graph.add_node(Node::Hop(source));
-
-        results.sort_by(|a, b| a.ttl().cmp(&b.ttl()));
-        let mut prev_node = source;
-        let mut prev_ttl = 1;
-
-        // for each matched hop
-        for hop in results.iter() {
-            let ttl = hop.ttl();
-
-            // find any missing hops between this one and the last seen
-            let hidden = ttl - prev_ttl;
-            for i in 1..hidden {
-                let new_node = graph.add_node(Node::Hidden(prev_ttl + i, hop.flowhash()));
-                graph.add_edge(prev_node, new_node, Edge::Connected);
-                prev_node = new_node;
-            }
-
-            let new_node = graph.add_node(Node::Hop(hop.received()));
-
-            // if the last hop was the same distance make don't add an edge
-            if new_node == prev_node {
-                prev_ttl = ttl;
-                continue;
-            }
-            //graph.add_edge(source, index, Edge::RTT(hop.elapsed()));
-            graph.add_edge(prev_node, new_node, Edge::Connected);
-            //graph.add_edge(prev_node, new_node, Edge::TTL(hop.ttl()));
-
-            prev_node = new_node;
-            prev_ttl = ttl;
-        }
-
-        graph
-    }
 
     /// Send all targets one packet
-    fn sweep(&self, packet_builder: &mut PacketBuilderIpv4, tx: &mut TransportSender, target: Ipv4Addr) -> Vec<Probe> {
+    fn sweep(&self, source: &Ipv4Addr, tx: &mut TransportSender, target: Ipv4Addr) -> Result<HashMap<u16, Probe>, &'static str> {
         let Options { min_ttl, max_ttl, delay, .. } = self.options;
 
         (min_ttl..=max_ttl)
             .into_iter()
-            .map(|ttl| {
-                let (packet, probe) = packet_builder.build_packet(Protocol::UDP, target, ttl, 33440); 
-                tx.send_to(packet, IpAddr::V4(target));
+            .map(|ttl| build_ipv4_probe(Protocol::UDP, source, target, ttl, 33440))
+            .map(|(packet, probe)| {
                 std::thread::sleep(Duration::new(0, delay as u32));
-                probe
+
+                tx.send_to(packet, IpAddr::V4(target))
+                    .and(Ok(probe))
             })
-            .collect()
+            .fold(Ok(HashMap::new()), |hashmap, probe: Result<Probe, _>| {
+               hashmap.map(|mut hash| {
+                   let probe = probe.unwrap();
+                   hash.insert(probe.id, probe);
+                   hash
+               })
+            })
     }
 
     /// Listen for packet responses
@@ -190,7 +127,7 @@ impl Traceroute {
         let mut results = vec![];
         // Listen for return packets
         let listen_start = Instant::now();
-        while let Ok(Some((packet, ip))) = ipv4_packet_iter(rx).next_with_timeout(timeout) {
+        while let Ok(Some((packet, _ip))) = ipv4_packet_iter(rx).next_with_timeout(timeout) {
             // check if we have been listening too long
             if Instant::now().duration_since(listen_start) > timeout {
                 break;
@@ -199,11 +136,6 @@ impl Traceroute {
             if let Ok(response) = handle_ipv4_packet(packet) {
                 results.push(response);
             }
-
-            // Check if we found the target
-            //if ip == target {
-            //    target_ttl = Some(depth);
-            //}
         }
 
         results
@@ -246,7 +178,7 @@ fn unpack_icmp_payload(payload: &[u8]) -> Result<(u16, u16), &'static str> {
                 .unwrap()
                 .get_checksum()
         }
-        _ => unimplemented!("unknown inner packet type"),
+        _ => return Err("unknown inner packet type"),
     };
     Ok((id, checksum))
 }
@@ -261,7 +193,7 @@ fn handle_icmp_packet(packet: &[u8]) -> Result<(u16, u16), &'static str> {
         IcmpTypes::DestinationUnreachable => {
             unpack_icmp_payload(payload)
         },
-        _ => Result::Err("wrong packet icmp")
+        _ => Err("wrong packet icmp")
     }
 
 }

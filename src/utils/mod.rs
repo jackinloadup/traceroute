@@ -12,7 +12,9 @@ pub use hop::Hop;
 pub use probe::{Probe, ProbeResponse};
 pub use node::Node;
 pub use edge::Edge;
-//use std::net::IpAddr;
+
+use std::net::{IpAddr, Ipv4Addr};
+use pnet::datalink::{NetworkInterface, MacAddr};
 
 //use std::collections::HashMap;
 
@@ -28,6 +30,56 @@ pub enum Protocol {
     DCCP,
 }
 
+pub fn get_default_source_ip() -> Ipv4Addr {
+   let default_interface = get_available_interfaces()
+       .iter()
+       .next()
+       .expect("no interfaces available")
+       .clone();
+
+   let source_ip = default_interface.ips
+       .iter()
+       .filter(|i| i.is_ipv4())
+       .next()
+       .expect("Couldn't get interface IPv4 address")
+       .ip();
+
+   match source_ip {
+       IpAddr::V4(ip) => ip,
+       _ => panic!("Not possible to get here"),
+   }
+}
+
+/// Returns the list of interfaces that are up, not loopback, not point-to-point,
+/// and have an IPv4 address associated with them.
+pub fn get_available_interfaces() -> Vec<NetworkInterface> {
+    let all_interfaces = pnet::datalink::interfaces();
+
+    let available_interfaces: Vec<NetworkInterface>;
+
+    available_interfaces = if cfg!(target_family = "windows") {
+        all_interfaces
+            .into_iter()
+            .filter(|e| e.mac.is_some()
+                && e.mac.unwrap() != MacAddr::zero()
+                && e.ips
+                .iter()
+                .filter(|ip| ip.ip().to_string() != "0.0.0.0")
+                .next().is_some())
+            .collect()
+    } else {
+        all_interfaces
+            .into_iter()
+            .filter(|e| e.is_up()
+                && !e.is_loopback()
+                && e.ips.iter().filter(|ip| ip.is_ipv4()).next().is_some()
+                && e.mac.is_some()
+                && e.mac.unwrap() != MacAddr::zero())
+            .collect()
+    };
+
+    available_interfaces
+}
 //pub struct UdpResponse {
 //    /// Outer Ip header source
 //    source: IpAddr,
