@@ -95,17 +95,19 @@ impl Traceroute {
         let timeout = Duration::new(1, 0);
         let responses = Self::listen(rx, timeout);
 
+        let masked = self.options.get_masked();
 
-        Ok(TracerouteResults::new(probes, responses, IpAddr::V4(source), IpAddr::V4(target)))
+        Ok(TracerouteResults::new(probes, responses, IpAddr::V4(source), IpAddr::V4(target), masked))
     }
 
 
     /// Send all targets one packet
     fn sweep(&self, source: &Ipv4Addr, tx: &mut TransportSender, target: Ipv4Addr) -> Result<HashMap<u16, Probe>, &'static str> {
-        let Options { min_ttl, max_ttl, delay, .. } = self.options;
+        let Options { delay, min_ttl, max_ttl, .. } = self.options;
 
         (min_ttl..=max_ttl)
             .into_iter()
+            .filter(|i| !self.options.get_masked().contains(i))
             .map(|ttl| build_ipv4_probe(Protocol::UDP, source, target, ttl, 33440))
             .map(|(packet, probe)| {
                 std::thread::sleep(Duration::new(0, delay as u32));

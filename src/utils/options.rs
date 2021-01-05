@@ -41,6 +41,9 @@ pub struct Options {
     /// Output file name [default: stdout]
     #[structopt(short, long, parse(from_os_str))]
     pub output_file: Option<PathBuf>,
+    /// TTLs to assume Hidden
+    #[structopt(long, use_delimiter = true)]
+    mask: Option<Vec<u8>>,
     /// Hostname or IP address of target
     #[structopt(parse(try_from_str = Host::parse))]
     pub target: Vec<Host>,
@@ -66,6 +69,10 @@ impl Options {
         }
 
         Ok(hosts)
+    }
+
+    pub fn get_masked(&self) -> Vec<u8> {
+        self.mask.to_owned().unwrap_or(vec![])
     }
 }
 

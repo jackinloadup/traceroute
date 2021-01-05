@@ -23,7 +23,7 @@ pub struct TracerouteResults {
 }
 
 impl TracerouteResults {
-    pub fn new(sent: HashMap<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr) -> TracerouteResults {
+    pub fn new(sent: HashMap<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> TracerouteResults {
 
 
         // Don't bother the host with more probes than are required. We want to be good
@@ -33,7 +33,7 @@ impl TracerouteResults {
         //    max_ttl = ttl;
         //}
 
-        let graph = Self::match_packets(sent, recv, source, target);
+        let graph = Self::match_packets(sent, recv, source, target, masked);
         TracerouteResults {
             //min_ttl: 1,
             //compressed: false,
@@ -58,7 +58,7 @@ impl TracerouteResults {
 
     // TODO what to do when target isn't found
     /// Correlate sent and received packets
-    fn match_packets(mut sent: HashMap::<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr) -> DiGraphMap<Node, Edge> {
+    fn match_packets(mut sent: HashMap::<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> DiGraphMap<Node, Edge> {
         let mut target_ttl = None;
         let mut results = vec![];
         for response in recv {
@@ -103,7 +103,13 @@ impl TracerouteResults {
             // find any missing hops between this one and the last seen
             let hidden = ttl - prev_ttl;
             for i in 1..hidden {
-                let new_node = graph.add_node(Node::Hidden(prev_ttl + i, hop.flowhash()));
+                let hidden_ttl = prev_ttl + i;
+                let new_node = if masked.contains(&hidden_ttl) {
+                    Node::Masked(hidden_ttl)
+                } else {
+                    Node::Hidden(hidden_ttl, hop.flowhash())
+                };
+                graph.add_node(new_node);
                 graph.add_edge(prev_node, new_node, Edge::Connected);
                 prev_node = new_node;
             }

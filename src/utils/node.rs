@@ -6,6 +6,7 @@ use std::cmp::Ordering;
 pub enum Node {
   Hop(IpAddr),
   Hidden(u8, u16),
+  Masked(u8)
 }
 
 impl fmt::Display for Node {
@@ -13,6 +14,7 @@ impl fmt::Display for Node {
         match self {
             Self::Hop(ip) => write!(f, "{}", ip),
             Self::Hidden(ttl, flowhash) => write!(f, "#{:x?} Hidden @ {}", flowhash, ttl),
+            Self::Masked(ttl) => write!(f, "Masked @ {}", ttl),
         }
     }
 }
@@ -22,11 +24,15 @@ impl PartialEq for Node {
         match self {
             Self::Hop(ip) => match other {
                 Self::Hop(ip2) => ip == ip2,
-                Self::Hidden(_, _) => false,
+                Self::Hidden(_, _) | Self::Masked(_) => false,
             }
             Self::Hidden(ttl, _) => match other {
-                Self::Hop(_) => false,
                 Self::Hidden(ttl2, _) => ttl == ttl2,
+                Self::Hop(_) | Self::Masked(_) => false,
+            }
+            Self::Masked(ttl) => match other {
+                Self::Hidden(_, _) | Self::Hop(_) => false,
+                Self::Masked(ttl2) => ttl == ttl2,
             }
         }
     }
@@ -38,11 +44,16 @@ impl Ord for Node {
         match self {
             Self::Hop(ip) => match other {
                 Self::Hop(ip2) => ip.cmp(ip2),
-                Self::Hidden(_,_) => Ordering::Less,
+                Self::Hidden(_,_) | Self::Masked(_) => Ordering::Less,
             }
             Self::Hidden(ttl,_) => match other {
                 Self::Hop(_) => Ordering::Greater,
                 Self::Hidden(ttl2,_) => ttl.cmp(ttl2),
+                Self::Masked(_) => Ordering::Less,
+            }
+            Self::Masked(ttl) => match other {
+                Self::Hidden(_, _) | Self::Hop(_) => Ordering::Greater,
+                Self::Masked(ttl2) => ttl.cmp(ttl2),
             }
         }
     }
