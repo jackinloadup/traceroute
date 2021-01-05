@@ -23,15 +23,14 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
 
+use std::thread::sleep;
+
 pub use utils::TracerouteResults;
 pub use utils::Options;
 pub use utils::Protocol;
 pub use utils::{Probe, ProbeResponse};
 use utils::get_default_source_ip;
 use utils::packet_builder::build_ipv4_probe;
-
-use petgraph::graphmap::DiGraphMap;
-use utils::{Node, Edge};
 
 /// Provides management interface for traceroute
 pub struct Traceroute {
@@ -62,9 +61,11 @@ impl Traceroute {
             }
         };
 
+        // Run trace against each target and merge results
         let results = targets.iter()
                          .map(|target| self.trace(&mut tx, &mut rx, *target))
-                         // TODO look into fold_first when it stablizes
+                         // TODO look into fold_first when it stablizes to eliminate the need for
+                         // Option<T>
                          .fold(None, |prev: Option<TracerouteResults>, cur| {
                              match prev {
                                  Some(mut graph) => {
@@ -87,10 +88,7 @@ impl Traceroute {
 
         let source = get_default_source_ip();
 
-        let probes = match self.sweep(&source, tx, target) {
-            Ok(probes) => probes,
-            Err(e) => return Err(e),
-        };
+        let probes = self.sweep(&source, tx, target)?;
 
         let timeout = Duration::new(1, 0);
         let responses = Self::listen(rx, timeout);
@@ -110,7 +108,7 @@ impl Traceroute {
             .filter(|i| !self.options.get_masked().contains(i))
             .map(|ttl| build_ipv4_probe(Protocol::UDP, source, target, ttl, 33440))
             .map(|(packet, probe)| {
-                std::thread::sleep(Duration::new(0, delay as u32));
+                sleep(Duration::from_millis(delay as u64));
 
                 tx.send_to(packet, IpAddr::V4(target))
                     .and(Ok(probe))
