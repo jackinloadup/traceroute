@@ -11,6 +11,8 @@ pub use super::Hop;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
+type Graph = DiGraphMap<Node, Edge>;
+
 pub struct TracerouteResults {
     //flows: &flow_map_t,
     //min_ttl: u8,
@@ -19,7 +21,7 @@ pub struct TracerouteResults {
     //use_srcport_for_path_generation: bool,
     source: IpAddr,
     target: IpAddr,
-    graph: DiGraphMap<Node, Edge>,
+    graph: Graph,
 }
 
 impl TracerouteResults {
@@ -58,7 +60,7 @@ impl TracerouteResults {
 
     // TODO what to do when target isn't found
     /// Correlate sent and received packets
-    fn match_packets(mut sent: HashMap::<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> DiGraphMap<Node, Edge> {
+    fn match_packets(mut sent: HashMap::<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> Graph {
         let mut target_ttl = None;
         let mut results = vec![];
         for response in recv {
@@ -89,7 +91,7 @@ impl TracerouteResults {
 
 
 
-        let mut graph = DiGraphMap::<Node, Edge>::new();
+        let mut graph = Graph::new();
         let source = graph.add_node(Node::Hop(source));
 
         results.sort_by(|a, b| a.ttl().cmp(&b.ttl()));
@@ -140,7 +142,7 @@ impl ToString for TracerouteResults {
 }
 
 impl Deref for TracerouteResults {
-    type Target = DiGraphMap<Node, Edge>;
+    type Target = Graph;
 
     fn deref(&self) -> &Self::Target {
         &self.graph
