@@ -75,7 +75,7 @@ impl Traceroute {
 
     /// Run a trace against a specific single target
     pub fn trace(&self, tx: &mut TransportSender, rx: &mut TransportReceiver, target: Ipv4Addr) -> DiGraphMap<Node, Edge> {
-        println!("Start trace for {}", target);
+        eprintln!("Start trace for {}", target);
 
         let timeout = Duration::new(1, 0);
 
@@ -116,8 +116,8 @@ impl Traceroute {
         }
 
         match target_ttl {
-            Some(ttl) => println!("Target TTL is {}", ttl),
-            None => println!("Target wasn't found"),
+            Some(ttl) => eprintln!("Target TTL is {}", ttl),
+            None => eprintln!("Target wasn't found"),
         }
 
         // Loop through unmatch probes

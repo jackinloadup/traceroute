@@ -77,7 +77,7 @@ fn resolve(domain: &String) -> io::Result<Vec<Ipv4Addr>> {
                 .filter(|i| i.is_ipv4())
                 .map(|address| match address {
                     IpAddr::V4(ip) => {
-                        println!("Resolved {} to {}", domain, ip);
+                        eprintln!("Resolved {} to {}", domain, ip);
                         ip
                     }
                     IpAddr::V6(_) => unimplemented!("Can't handle ipv6 yet:("),

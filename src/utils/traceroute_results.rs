@@ -25,8 +25,8 @@ impl TracerouteResults {
             graph,
         }
     }
-    pub fn print(&self) {
-        println!("{}", Dot::new(&self.graph));
+    pub fn as_string(&self) -> String {
+        format!("{}", Dot::new(&self.graph))
     }
     pub fn write(&self, file: PathBuf) {
         let dot = Dot::new(&self.graph);
