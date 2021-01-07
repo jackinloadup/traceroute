@@ -5,6 +5,7 @@ extern crate petgraph;
 extern crate pnet;
 extern crate resolve;
 
+pub mod options;
 pub mod utils;
 
 use std::time::Duration;
@@ -27,9 +28,10 @@ use std::io;
 
 use std::thread::sleep;
 
+pub use options::Options;
+
 use utils::get_default_source_ip;
 use utils::packet_builder::build_ipv4_probe;
-pub use utils::Options;
 pub use utils::Protocol;
 pub use utils::TracerouteResults;
 pub use utils::{Probe, ProbeResponse};

@@ -1,7 +1,6 @@
 pub mod edge;
 pub mod hop;
 pub mod node;
-pub mod options;
 pub mod packet_builder;
 pub mod probe;
 pub mod traceroute_results;
@@ -9,7 +8,6 @@ pub mod traceroute_results;
 pub use edge::Edge;
 pub use hop::Hop;
 pub use node::Node;
-pub use options::Options;
 pub use probe::{Probe, ProbeResponse};
 pub use traceroute_results::TracerouteResults;
 
