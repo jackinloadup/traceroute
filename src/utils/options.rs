@@ -1,12 +1,12 @@
-use structopt::StructOpt;
-use url::Host;
-use std::path::PathBuf;
+use std::io;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
-use std::io;
+use std::path::PathBuf;
+use structopt::StructOpt;
+use url::Host;
 
-use resolve::resolver::ResolveHost;
 use resolve::resolve_host;
+use resolve::resolver::ResolveHost;
 
 use crate::TracerouteError;
 
@@ -88,6 +88,5 @@ impl Options {
 
 /// Resolve a domain name to ip addresses
 fn resolve(domain: &String) -> Result<ResolveHost, TracerouteError> {
-    resolve_host(&domain)
-        .map_err(|err| TracerouteError::Io(err))
+    resolve_host(&domain).map_err(|err| TracerouteError::Io(err))
 }

@@ -1,6 +1,6 @@
-use std::time::Instant;
-use std::net::IpAddr;
 use std::cmp::Ordering;
+use std::net::IpAddr;
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct Probe {
@@ -23,7 +23,7 @@ impl Probe {
             ttl,
             id,
             checksum,
-            flowhash
+            flowhash,
         }
     }
 }
@@ -60,7 +60,7 @@ pub struct ProbeResponse {
 
 impl ProbeResponse {
     pub fn new(source: IpAddr, id: u16, checksum: u16) -> Self {
-        Self { 
+        Self {
             source,
             id,
             checksum,
@@ -68,4 +68,3 @@ impl ProbeResponse {
         }
     }
 }
-

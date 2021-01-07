@@ -1,16 +1,16 @@
+pub use super::Hop;
+pub use super::{Probe, ProbeResponse};
+use crate::utils::{Edge, Node};
+use crate::TracerouteError;
 use petgraph::dot::Dot;
 use petgraph::graphmap::DiGraphMap;
-use crate::utils::{Node, Edge};
-use crate::TracerouteError;
-use std::io::Write;
-use std::path::PathBuf;
-use std::fs::File;
-use std::string::ToString;
-use std::net::IpAddr;
-pub use super::{Probe, ProbeResponse};
-pub use super::Hop;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::net::IpAddr;
 use std::ops::{Deref, DerefMut};
+use std::path::PathBuf;
+use std::string::ToString;
 
 type Graph = DiGraphMap<Node, Edge>;
 
@@ -34,9 +34,13 @@ impl TracerouteResults {
         }
     }
 
-    pub fn new(sent: HashMap<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> Self {
-
-
+    pub fn new(
+        sent: HashMap<u16, Probe>,
+        recv: Vec<ProbeResponse>,
+        source: IpAddr,
+        target: IpAddr,
+        masked: Vec<u8>,
+    ) -> Self {
         // Don't bother the host with more probes than are required. We want to be good
         // neighbors
         //let mut target_ttl = None;
@@ -58,10 +62,10 @@ impl TracerouteResults {
     pub fn write(&self, file: PathBuf) -> Result<(), TracerouteError> {
         let dot = Dot::new(&self.graph);
         let mut file = File::create(file).map_err(|err| TracerouteError::Io(err))?;
-        file.write_all(dot.to_string().as_bytes()).map_err(|err| TracerouteError::Io(err))
+        file.write_all(dot.to_string().as_bytes())
+            .map_err(|err| TracerouteError::Io(err))
     }
-    pub fn compress() {
-    }
+    pub fn compress() {}
     //pub fn flows() -> flow_map_t {
     //}
     //pub fn match_packet(Packet) -> &IpAddr {
@@ -69,12 +73,25 @@ impl TracerouteResults {
 
     // TODO what to do when target isn't found
     /// Correlate sent and received packets
-    fn match_packets(mut sent: HashMap::<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> Graph {
+    fn match_packets(
+        mut sent: HashMap<u16, Probe>,
+        recv: Vec<ProbeResponse>,
+        source: IpAddr,
+        target: IpAddr,
+        masked: Vec<u8>,
+    ) -> Graph {
         let mut target_ttl = None;
         let mut results = vec![];
         for response in recv {
             if let Some(probe) = sent.remove(&response.id) {
-                let hop = Hop::new(probe.ttl, source, probe.instant, response.source, response.instant, probe.flowhash);
+                let hop = Hop::new(
+                    probe.ttl,
+                    source,
+                    probe.instant,
+                    response.source,
+                    response.instant,
+                    probe.flowhash,
+                );
                 if None == target_ttl && response.source == target {
                     target_ttl = Some(probe.ttl);
                 }
@@ -97,8 +114,6 @@ impl TracerouteResults {
 
         //    println!("{:?}", probe);
         //}
-
-
 
         let mut graph = Graph::new();
         let source = graph.add_node(Node::Hop(source));

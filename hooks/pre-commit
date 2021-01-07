@@ -1,0 +1,16 @@
+#/bin/sh
+
+main() {
+        echo "Validating proper formatting with rustfmt";
+        OUTPUT=$(cargo fmt -- --check -l);
+        ERROR_CODE=$?;
+
+        if [[ $ERROR_CODE -gt 0 ]]
+                then
+                        echo "The following files have improper formatting"
+                        echo "$OUTPUT" | sed "s|$PWD/||g"
+                        exit $ERROR_CODE
+                        fi
+}
+main
+exit 1

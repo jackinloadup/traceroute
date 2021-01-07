@@ -1,22 +1,22 @@
-pub mod options;
-pub mod traceroute_results;
+pub mod edge;
 pub mod hop;
+pub mod node;
+pub mod options;
 pub mod packet_builder;
 pub mod probe;
-pub mod node;
-pub mod edge;
+pub mod traceroute_results;
 
-pub use traceroute_results::TracerouteResults;
-pub use options::Options;
-pub use hop::Hop;
-pub use probe::{Probe, ProbeResponse};
-pub use node::Node;
 pub use edge::Edge;
+pub use hop::Hop;
+pub use node::Node;
+pub use options::Options;
+pub use probe::{Probe, ProbeResponse};
+pub use traceroute_results::TracerouteResults;
 
 use crate::TracerouteError;
 
+use pnet::datalink::{MacAddr, NetworkInterface};
 use std::net::{IpAddr, Ipv4Addr};
-use pnet::datalink::{NetworkInterface, MacAddr};
 
 use std::io;
 
@@ -36,23 +36,30 @@ pub enum Protocol {
 }
 
 pub fn get_default_source_ip() -> Result<Ipv4Addr, TracerouteError> {
-   let default_interface = get_available_interfaces()
-       .iter()
-       .next()
-       .ok_or(TracerouteError::Io(io::Error::new(io::ErrorKind::Other, "No interfaces available")))?
-       .clone();
+    let default_interface = get_available_interfaces()
+        .iter()
+        .next()
+        .ok_or(TracerouteError::Io(io::Error::new(
+            io::ErrorKind::Other,
+            "No interfaces available",
+        )))?
+        .clone();
 
-   let source_ip = default_interface.ips
-       .iter()
-       .filter(|i| i.is_ipv4())
-       .next()
-       .ok_or(TracerouteError::Io(io::Error::new(io::ErrorKind::Other, "Couldn't get interface IPv4 address")))?
-       .ip();
+    let source_ip = default_interface
+        .ips
+        .iter()
+        .filter(|i| i.is_ipv4())
+        .next()
+        .ok_or(TracerouteError::Io(io::Error::new(
+            io::ErrorKind::Other,
+            "Couldn't get interface IPv4 address",
+        )))?
+        .ip();
 
-   match source_ip {
-       IpAddr::V4(ip) => Ok(ip),
-       _ => Err(TracerouteError::Impossible("Not possible to get here")),
-   }
+    match source_ip {
+        IpAddr::V4(ip) => Ok(ip),
+        _ => Err(TracerouteError::Impossible("Not possible to get here")),
+    }
 }
 
 /// Returns the list of interfaces that are up, not loopback, not point-to-point,
@@ -63,21 +70,26 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
     if cfg!(target_family = "windows") {
         all_interfaces
             .into_iter()
-            .filter(|e| e.mac.is_some()
-                && e.mac.unwrap() != MacAddr::zero()
-                && e.ips
-                .iter()
-                .filter(|ip| ip.ip().to_string() != "0.0.0.0")
-                .next().is_some())
+            .filter(|e| {
+                e.mac.is_some()
+                    && e.mac.unwrap() != MacAddr::zero()
+                    && e.ips
+                        .iter()
+                        .filter(|ip| ip.ip().to_string() != "0.0.0.0")
+                        .next()
+                        .is_some()
+            })
             .collect()
     } else {
         all_interfaces
             .into_iter()
-            .filter(|e| e.is_up()
-                && !e.is_loopback()
-                && e.ips.iter().filter(|ip| ip.is_ipv4()).next().is_some()
-                && e.mac.is_some()
-                && e.mac.unwrap() != MacAddr::zero())
+            .filter(|e| {
+                e.is_up()
+                    && !e.is_loopback()
+                    && e.ips.iter().filter(|ip| ip.is_ipv4()).next().is_some()
+                    && e.mac.is_some()
+                    && e.mac.unwrap() != MacAddr::zero()
+            })
             .collect()
     }
 }
@@ -116,9 +128,9 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
 // struct Trace {
 //     destination: IpAddr,
 //     flows: Vec<Flow>,
-//     
+//
 // }
-// 
+//
 // /// A trace to a specific destination on specific protocol
 // struct Flow {
 //     interface: NetworkInterface,
@@ -131,7 +143,7 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
 //    /// Time to Live or how far away is the hop we received the response from
 //    ttl: u16,
 //    /// The method to be used in probing the node
-//    request_method: Protocol, 
+//    request_method: Protocol,
 //    /// Response from the query
 //    response: Option<QueryResult>,
 //}

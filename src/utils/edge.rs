@@ -1,5 +1,5 @@
-use std::time::Duration;
 use std::fmt;
+use std::time::Duration;
 
 #[derive(Clone)]
 pub enum Edge {

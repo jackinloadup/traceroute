@@ -15,7 +15,14 @@ pub struct Hop {
 }
 
 impl Hop {
-    pub fn new(ttl: u8, sent: IpAddr, sent_time: Instant, received: IpAddr, received_time: Instant, flowhash: u16) -> Hop {
+    pub fn new(
+        ttl: u8,
+        sent: IpAddr,
+        sent_time: Instant,
+        received: IpAddr,
+        received_time: Instant,
+        flowhash: u16,
+    ) -> Hop {
         Hop {
             ttl,
             sent,
@@ -58,6 +65,12 @@ impl Hop {
 
 impl fmt::Display for Hop {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:>2}  {:<15}  {:#?}", self.ttl, self.received, self.elapsed())
+        write!(
+            f,
+            "{:>2}  {:<15}  {:#?}",
+            self.ttl,
+            self.received,
+            self.elapsed()
+        )
     }
 }
