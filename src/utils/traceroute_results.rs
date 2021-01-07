@@ -61,9 +61,8 @@ impl TracerouteResults {
     }
     pub fn write(&self, file: PathBuf) -> Result<(), TracerouteError> {
         let dot = Dot::new(&self.graph);
-        let mut file = File::create(file).map_err(TracerouteError::Io)?;
-        file.write_all(dot.to_string().as_bytes())
-            .map_err(TracerouteError::Io)
+        let mut file = File::create(file)?;
+        Ok(file.write_all(dot.to_string().as_bytes())?)
     }
     pub fn compress() {}
     //pub fn flows() -> flow_map_t {

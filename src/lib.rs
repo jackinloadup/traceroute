@@ -5,13 +5,14 @@ extern crate petgraph;
 extern crate pnet;
 extern crate resolve;
 
+pub mod error;
 pub mod options;
 pub mod utils;
 
 use std::time::Duration;
 use std::time::Instant;
 
-use pnet::packet::icmp::{IcmpPacket, IcmpType, IcmpTypes};
+use pnet::packet::icmp::{IcmpPacket, IcmpTypes};
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::udp::UdpPacket;
@@ -24,10 +25,9 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
 
-use std::io;
-
 use std::thread::sleep;
 
+pub use error::TracerouteError;
 pub use options::Options;
 
 use utils::get_default_source_ip;
@@ -35,18 +35,6 @@ use utils::packet_builder::build_ipv4_probe;
 pub use utils::Protocol;
 pub use utils::TracerouteResults;
 pub use utils::{Probe, ProbeResponse};
-
-#[derive(Debug)]
-pub enum TracerouteError {
-    Io(io::Error),
-    UnmatchedPacket(&'static str),
-    ICMPTypeUnexpected(IcmpType),
-    PacketDecode,
-    MalformedPacket,
-    NoIpv6,
-    Impossible(&'static str),
-    UnimplimentedProtocol(Protocol),
-}
 
 /// Provides management interface for traceroute
 pub struct Traceroute {
@@ -79,9 +67,9 @@ impl Traceroute {
             // Option<T>
             .fold(Ok(default_trace), |prev, cur| {
                 let mut traces = prev?;
-                if let Ok(trace) = cur {
-                    traces.extend(trace.all_edges());
-                }
+                let trace = cur?;
+
+                traces.extend(trace.all_edges());
                 Ok(traces)
             })
     }

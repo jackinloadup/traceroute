@@ -16,12 +16,13 @@ use crate::TracerouteError;
 use pnet::datalink::{MacAddr, NetworkInterface};
 use std::net::{IpAddr, Ipv4Addr};
 
+use std::fmt;
 use std::io;
 
 //use std::collections::HashMap;
 
 /// Protocol to be used for traceroute
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Protocol {
     /// UDP-based traceroute
     UDP,
@@ -31,6 +32,12 @@ pub enum Protocol {
     ICMP,
     /// DCCP-based traceroute
     DCCP,
+}
+
+impl fmt::Display for Protocol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?} protocol", self)
+    }
 }
 
 pub fn get_default_source_ip() -> Result<Ipv4Addr, TracerouteError> {

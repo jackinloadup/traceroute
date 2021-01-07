@@ -6,7 +6,6 @@ use structopt::StructOpt;
 use url::Host;
 
 use resolve::resolve_host;
-use resolve::resolver::ResolveHost;
 
 use crate::TracerouteError;
 
@@ -68,7 +67,7 @@ impl Options {
                 Host::Ipv4(ip) => hosts.push(*ip),
                 Host::Ipv6(_) => return Err(TracerouteError::NoIpv6),
                 Host::Domain(domain) => {
-                    for ip in resolve(&domain)? {
+                    for ip in resolve_host(&domain)? {
                         match ip {
                             IpAddr::V4(ipv4) => hosts.push(ipv4),
                             IpAddr::V6(_) => continue,
@@ -84,9 +83,4 @@ impl Options {
     pub fn get_masked(&self) -> Vec<u8> {
         self.mask.to_owned().unwrap_or_default()
     }
-}
-
-/// Resolve a domain name to ip addresses
-fn resolve(domain: &str) -> Result<ResolveHost, TracerouteError> {
-    resolve_host(&domain).map_err(TracerouteError::Io)
 }
