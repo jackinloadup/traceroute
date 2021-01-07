@@ -5,7 +5,10 @@ use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::io;
 
+use resolve::resolver::ResolveHost;
 use resolve::resolve_host;
+
+use crate::TracerouteError;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "traceroute", about)]
@@ -46,23 +49,30 @@ pub struct Options {
     mask: Option<Vec<u8>>,
     /// Hostname or IP address of target
     #[structopt(parse(try_from_str = Host::parse))]
-    pub target: Vec<Host>,
+    target: Vec<Host>,
 }
 
 impl Options {
     /// Gather all IP addresses dictated through options
-    pub fn target_ips(&self) -> io::Result<Vec<Ipv4Addr>> {
+    pub fn target_ips(&self) -> Result<Vec<Ipv4Addr>, TracerouteError> {
         // @TODO return an iterator for the different targets?
         let mut hosts = vec![];
+
+        if self.target.is_empty() {
+            let err = io::Error::new(io::ErrorKind::Other, "No target given");
+            return Err(TracerouteError::Io(err));
+        }
 
         for host in &self.target {
             match host {
                 Host::Ipv4(ip) => hosts.push(ip.clone()),
-                Host::Ipv6(_) => unimplemented!("Can't handle ipv6 yet :("),
+                Host::Ipv6(_) => return Err(TracerouteError::NoIpv6),
                 Host::Domain(domain) => {
-                    match resolve(&domain) {
-                        Ok(mut ips) => hosts.append(&mut ips),
-                        Err(e) => return Err(e),
+                    for ip in resolve(&domain)? {
+                        match ip {
+                            IpAddr::V4(ipv4) => hosts.push(ipv4),
+                            IpAddr::V6(_) => continue,
+                        }
                     }
                 }
             }
@@ -77,18 +87,7 @@ impl Options {
 }
 
 /// Resolve a domain name to ip addresses
-fn resolve(domain: &String) -> io::Result<Vec<Ipv4Addr>> {
+fn resolve(domain: &String) -> Result<ResolveHost, TracerouteError> {
     resolve_host(&domain)
-        .map(|result| {
-            result
-                .filter(|i| i.is_ipv4())
-                .map(|address| match address {
-                    IpAddr::V4(ip) => {
-                        eprintln!("Resolved {} to {}", domain, ip);
-                        ip
-                    }
-                    IpAddr::V6(_) => unimplemented!("Can't handle ipv6 yet:("),
-                })
-                .collect::<Vec<Ipv4Addr>>()
-        })
+        .map_err(|err| TracerouteError::Io(err))
 }

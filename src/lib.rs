@@ -10,7 +10,7 @@ pub mod utils;
 use std::time::Instant;
 use std::time::Duration;
 
-use pnet::packet::icmp::{IcmpPacket, IcmpTypes};
+use pnet::packet::icmp::{IcmpPacket, IcmpTypes, IcmpType};
 use pnet::packet::udp::UdpPacket;
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::ip::IpNextHeaderProtocols;
@@ -23,6 +23,8 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
 
+use std::io;
+
 use std::thread::sleep;
 
 pub use utils::TracerouteResults;
@@ -31,6 +33,18 @@ pub use utils::Protocol;
 pub use utils::{Probe, ProbeResponse};
 use utils::get_default_source_ip;
 use utils::packet_builder::build_ipv4_probe;
+
+#[derive(Debug)]
+pub enum TracerouteError {
+    Io(io::Error),
+    UnmatchedPacket(&'static str),
+    ICMPTypeUnexpected(IcmpType),
+    PacketDecode,
+    MalformedPacket,
+    NoIpv6,
+    Impossible(&'static str),
+    UnimplimentedProtocol(Protocol),
+}
 
 /// Provides management interface for traceroute
 pub struct Traceroute {
@@ -45,48 +59,36 @@ impl Traceroute {
     }
 
     /// Run a contained traceroute against the target/s specified in options
-    pub fn run(&mut self) -> Result<TracerouteResults, &'static str> {
+    pub fn run(&mut self) -> Result<TracerouteResults, TracerouteError> {
         // Lock to ensure traceroute isn't running at the same time as another
 
         // Set the protocol we are looking to recieve
         let protocol = Layer3(IpNextHeaderProtocols::Icmp);
         let (mut tx, mut rx) = transport_channel(4096, protocol)
-                                    .expect("Can't get channel");
+            .map_err(|err| TracerouteError::Io(err))?;
 
-        let targets = match self.options.target_ips() {
-            Ok(ips) => ips,
-            Err(e) => {
-                eprintln!("{}", e);
-                return Err("Failed to get target ips");
-            }
-        };
+        let targets = self.options.target_ips()?;
+        let source = get_default_source_ip()?;
 
+        let default_trace = TracerouteResults::default(IpAddr::V4(source));
         // Run trace against each target and merge results
-        let results = targets.iter()
-                         .map(|target| self.trace(&mut tx, &mut rx, *target))
-                         // TODO look into fold_first when it stablizes to eliminate the need for
-                         // Option<T>
-                         .fold(None, |prev: Option<TracerouteResults>, cur| {
-                             match prev {
-                                 Some(mut graph) => {
-                                     if let Ok(trace) = cur {
-                                        graph.extend(trace.all_edges());
-                                     }
-                                     Some(graph)
-                                 }
-                                 None => cur.ok(),
-                             }
-                         });
-
-
-        results.ok_or("Idk, it failed")
+        targets.iter()
+            .map(|target| self.trace(&mut tx, &mut rx, source, *target))
+            // TODO look into fold_first when it stablizes to eliminate the need for
+            // Option<T>
+            .fold(Ok(default_trace), |prev, cur| {
+                let mut traces = prev?;
+                if let Ok(trace) = cur {
+                   traces.extend(trace.all_edges());
+                }
+                Ok(traces)
+            })
     }
 
     /// Run a trace against a specific single target
-    pub fn trace(&self, tx: &mut TransportSender, rx: &mut TransportReceiver, target: Ipv4Addr) -> Result<TracerouteResults, &'static str> {
+    pub fn trace(&self, tx: &mut TransportSender, rx: &mut TransportReceiver, source: Ipv4Addr, target: Ipv4Addr) -> Result<TracerouteResults, TracerouteError> {
         eprintln!("Start trace for {}", target);
 
-        let source = get_default_source_ip();
 
         let probes = self.sweep(&source, tx, target)?;
 
@@ -100,25 +102,27 @@ impl Traceroute {
 
 
     /// Send all targets one packet
-    fn sweep(&self, source: &Ipv4Addr, tx: &mut TransportSender, target: Ipv4Addr) -> Result<HashMap<u16, Probe>, &'static str> {
+    fn sweep(&self, source: &Ipv4Addr, tx: &mut TransportSender, target: Ipv4Addr) -> Result<HashMap<u16, Probe>, TracerouteError> {
         let Options { delay, min_ttl, max_ttl, .. } = self.options;
 
         (min_ttl..=max_ttl)
             .into_iter()
             .filter(|i| !self.options.get_masked().contains(i))
             .map(|ttl| build_ipv4_probe(Protocol::UDP, source, target, ttl, 33440))
-            .map(|(packet, probe)| {
+            .map(|results| {
+                let (packet, probe) = results?;
                 sleep(Duration::from_millis(delay as u64));
 
                 tx.send_to(packet, IpAddr::V4(target))
+                    .map_err(|err| TracerouteError::Io(err))
                     .and(Ok(probe))
             })
             .fold(Ok(HashMap::new()), |hashmap, probe: Result<Probe, _>| {
-               hashmap.map(|mut hash| {
-                   let probe = probe.unwrap();
-                   hash.insert(probe.id, probe);
-                   hash
-               })
+                let probe = probe?;
+                hashmap.map(|mut hash| {
+                    hash.insert(probe.id, probe);
+                    hash
+                })
             })
     }
 
@@ -168,23 +172,26 @@ impl Traceroute {
 }
 
 
-fn unpack_icmp_payload(payload: &[u8]) -> Result<(u16, u16), &'static str> {
-    let packet = Ipv4Packet::new(&payload[4..]).expect("malformed Ipv4 packet");
+fn unpack_icmp_payload(payload: &[u8]) -> Result<(u16, u16), TracerouteError> {
+    let packet = Ipv4Packet::new(&payload[4..])
+        .ok_or(TracerouteError::MalformedPacket)?;
     let id = packet.get_identification();
 
     let checksum = match packet.get_next_level_protocol() {
         IpNextHeaderProtocols::Udp => {
             UdpPacket::new(packet.payload())
-                .unwrap()
+                .ok_or(TracerouteError::MalformedPacket)?
                 .get_checksum()
         }
-        _ => return Err("unknown inner packet type"),
+        _ => return Err(TracerouteError::UnmatchedPacket("icmp response was of an unknown type")),
     };
     Ok((id, checksum))
 }
 
-fn handle_icmp_packet(packet: &[u8]) -> Result<(u16, u16), &'static str> {
-    let icmp_packet = IcmpPacket::new(packet).expect("malformed ICMP packet");
+fn handle_icmp_packet(packet: &[u8]) -> Result<(u16, u16), TracerouteError> {
+    let icmp_packet = IcmpPacket::new(packet)
+        .ok_or(TracerouteError::MalformedPacket)?;
+
     let payload = icmp_packet.payload();
 
     match icmp_packet.get_icmp_type() {
@@ -193,23 +200,20 @@ fn handle_icmp_packet(packet: &[u8]) -> Result<(u16, u16), &'static str> {
         IcmpTypes::DestinationUnreachable => {
             unpack_icmp_payload(payload)
         },
-        _ => Err("wrong packet icmp")
+        icmp_type => Err(TracerouteError::ICMPTypeUnexpected(icmp_type)),
     }
 
 }
 
 /// Processes IPv4 packet and passes it on to transport layer packet handler.
-fn handle_ipv4_packet(packet: Ipv4Packet) -> Result<ProbeResponse, &'static str> {
-    //let header = Ipv4Packet::new(packet).expect("malformed IPv4 packet");
-    let header = packet;
-
+fn handle_ipv4_packet(header: Ipv4Packet) -> Result<ProbeResponse, TracerouteError> {
     let source = IpAddr::V4(header.get_source());
     let payload = header.payload();
 
     let (id, checksum) = match header.get_next_level_protocol() {
-        IpNextHeaderProtocols::Icmp => handle_icmp_packet(payload).unwrap(),
+        IpNextHeaderProtocols::Icmp => handle_icmp_packet(payload)?,
         // Any packets hitting here are actually for another application
-        _ => return Err("wrong packet ipv4"),
+        _ => return Err(TracerouteError::UnmatchedPacket("pnet is sending us packets we didn't request")),
     };
     Ok(ProbeResponse::new(source, id, checksum))
 }

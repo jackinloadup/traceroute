@@ -1,5 +1,6 @@
 use crate::utils::Protocol;
 use crate::utils::Probe;
+use crate::TracerouteError;
 
 use rand::Rng;
 use pnet::packet::ip::IpNextHeaderProtocols;
@@ -12,13 +13,14 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 
 
-pub fn build_ipv4_probe(protocol: Protocol, source: &Ipv4Addr, destination_ip: Ipv4Addr, ttl: u8, port: u16) -> (Ipv4Packet ,Probe) {
+pub fn build_ipv4_probe(protocol: Protocol, source: &Ipv4Addr, destination_ip: Ipv4Addr, ttl: u8, port: u16) -> Result<(Ipv4Packet ,Probe), TracerouteError> {
     let buf = vec![0u8; 66]; // FIXME length of 66 is from libtraceroute
 
     // Generate random IPv4 packet id
     let ip_id = rand::thread_rng().gen();
 
-    let mut ip_header = MutableIpv4Packet::owned(buf).unwrap();
+    let mut ip_header = MutableIpv4Packet::owned(buf)
+                .ok_or(TracerouteError::MalformedPacket)?;
 
     ip_header.set_version(4);
     ip_header.set_header_length(5);
@@ -50,17 +52,16 @@ pub fn build_ipv4_probe(protocol: Protocol, source: &Ipv4Addr, destination_ip: I
     let flowhash = hasher.finish() as u16;
 
     let checksum = match protocol {
-        Protocol::UDP => build_ipv4_udp_packet(source, &mut ip_header, &destination_ip, port, source_port),
-        Protocol::TCP => unimplemented!("Can't build TCP packets yet"),
-        Protocol::ICMP => unimplemented!("Can't build ICMP packets yet"),
-        Protocol::DCCP => unimplemented!("Can't build DCCP packets yet"),
+        Protocol::UDP => build_ipv4_udp_packet(source, &mut ip_header, &destination_ip, port, source_port)?,
+        protocol => return Err(TracerouteError::UnimplimentedProtocol(protocol)),
     };
 
-    (ip_header.consume_to_immutable(), Probe::new(ttl, ip_id, checksum, flowhash))
+    Ok((ip_header.consume_to_immutable(), Probe::new(ttl, ip_id, checksum, flowhash)))
 }
 
-fn build_ipv4_udp_packet(source: &Ipv4Addr, ip_header: &mut MutableIpv4Packet, destination_ip: &Ipv4Addr, port: u16, source_port: u16) -> u16 {
-    let mut udp_header = MutableUdpPacket::new(ip_header.payload_mut()).unwrap();
+fn build_ipv4_udp_packet(source: &Ipv4Addr, ip_header: &mut MutableIpv4Packet, destination_ip: &Ipv4Addr, port: u16, source_port: u16) -> Result<u16, TracerouteError> {
+    let mut udp_header = MutableUdpPacket::new(ip_header.payload_mut())
+                .ok_or(TracerouteError::MalformedPacket)?;
 
     udp_header.set_source(source_port);
     udp_header.set_destination(port);
@@ -73,5 +74,5 @@ fn build_ipv4_udp_packet(source: &Ipv4Addr, ip_header: &mut MutableIpv4Packet, d
         destination_ip);
     udp_header.set_checksum(checksum);
 
-    checksum
+    Ok(checksum)
 }

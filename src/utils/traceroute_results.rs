@@ -1,6 +1,7 @@
 use petgraph::dot::Dot;
 use petgraph::graphmap::DiGraphMap;
 use crate::utils::{Node, Edge};
+use crate::TracerouteError;
 use std::io::Write;
 use std::path::PathBuf;
 use std::fs::File;
@@ -20,12 +21,20 @@ pub struct TracerouteResults {
     //broken_nat: bool,
     //use_srcport_for_path_generation: bool,
     source: IpAddr,
-    target: IpAddr,
+    target: Vec<IpAddr>,
     graph: Graph,
 }
 
 impl TracerouteResults {
-    pub fn new(sent: HashMap<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> TracerouteResults {
+    pub fn default(source: IpAddr) -> Self {
+        TracerouteResults {
+            source,
+            target: vec![],
+            graph: Graph::new(),
+        }
+    }
+
+    pub fn new(sent: HashMap<u16, Probe>, recv: Vec<ProbeResponse>, source: IpAddr, target: IpAddr, masked: Vec<u8>) -> Self {
 
 
         // Don't bother the host with more probes than are required. We want to be good
@@ -43,13 +52,13 @@ impl TracerouteResults {
             //use_srcport_for_path_generation: false,
             graph,
             source,
-            target,
+            target: vec![target],
         }
     }
-    pub fn write(&self, file: PathBuf) {
+    pub fn write(&self, file: PathBuf) -> Result<(), TracerouteError> {
         let dot = Dot::new(&self.graph);
-        let mut file = File::create(file).expect("create failed");
-        file.write_all(dot.to_string().as_bytes()).expect("write failed");
+        let mut file = File::create(file).map_err(|err| TracerouteError::Io(err))?;
+        file.write_all(dot.to_string().as_bytes()).map_err(|err| TracerouteError::Io(err))
     }
     pub fn compress() {
     }

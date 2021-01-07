@@ -13,12 +13,17 @@ pub use probe::{Probe, ProbeResponse};
 pub use node::Node;
 pub use edge::Edge;
 
+use crate::TracerouteError;
+
 use std::net::{IpAddr, Ipv4Addr};
 use pnet::datalink::{NetworkInterface, MacAddr};
+
+use std::io;
 
 //use std::collections::HashMap;
 
 /// Protocol to be used for traceroute
+#[derive(Debug)]
 pub enum Protocol {
     /// UDP-based traceroute
     UDP,
@@ -30,23 +35,23 @@ pub enum Protocol {
     DCCP,
 }
 
-pub fn get_default_source_ip() -> Ipv4Addr {
+pub fn get_default_source_ip() -> Result<Ipv4Addr, TracerouteError> {
    let default_interface = get_available_interfaces()
        .iter()
        .next()
-       .expect("no interfaces available")
+       .ok_or(TracerouteError::Io(io::Error::new(io::ErrorKind::Other, "No interfaces available")))?
        .clone();
 
    let source_ip = default_interface.ips
        .iter()
        .filter(|i| i.is_ipv4())
        .next()
-       .expect("Couldn't get interface IPv4 address")
+       .ok_or(TracerouteError::Io(io::Error::new(io::ErrorKind::Other, "Couldn't get interface IPv4 address")))?
        .ip();
 
    match source_ip {
-       IpAddr::V4(ip) => ip,
-       _ => panic!("Not possible to get here"),
+       IpAddr::V4(ip) => Ok(ip),
+       _ => Err(TracerouteError::Impossible("Not possible to get here")),
    }
 }
 
@@ -55,9 +60,7 @@ pub fn get_default_source_ip() -> Ipv4Addr {
 pub fn get_available_interfaces() -> Vec<NetworkInterface> {
     let all_interfaces = pnet::datalink::interfaces();
 
-    let available_interfaces: Vec<NetworkInterface>;
-
-    available_interfaces = if cfg!(target_family = "windows") {
+    if cfg!(target_family = "windows") {
         all_interfaces
             .into_iter()
             .filter(|e| e.mac.is_some()
@@ -76,9 +79,7 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
                 && e.mac.is_some()
                 && e.mac.unwrap() != MacAddr::zero())
             .collect()
-    };
-
-    available_interfaces
+    }
 }
 //pub struct UdpResponse {
 //    /// Outer Ip header source
