@@ -1,8 +1,13 @@
 #/bin/sh
 
 main() {
+        check_formatting \
+                && check_clippy
+}
+
+check_formatting() {
         echo "Validating proper formatting with rustfmt";
-        OUTPUT=$(cargo fmt -- --check -l);
+        OUTPUT=$(cargo fmt -- --check);
         ERROR_CODE=$?;
 
         if [[ $ERROR_CODE -gt 0 ]]
@@ -12,5 +17,17 @@ main() {
                         exit $ERROR_CODE
                         fi
 }
+
+check_clippy() {
+        echo "See what clippy thinks";
+        OUTPUT=$(find -name "*.rs" -not -path "./target/*" -exec touch "{}" + && cargo clippy -- -D warnings);
+        ERROR_CODE=$?;
+
+        if [[ $ERROR_CODE -gt 0 ]]
+                then
+                        echo "Clippy didn't like what it saw"
+                        echo "$OUTPUT" | sed "s|$PWD/||g"
+                        exit $ERROR_CODE
+                        fi
+}
 main
-exit 1

@@ -65,7 +65,7 @@ impl Options {
 
         for host in &self.target {
             match host {
-                Host::Ipv4(ip) => hosts.push(ip.clone()),
+                Host::Ipv4(ip) => hosts.push(*ip),
                 Host::Ipv6(_) => return Err(TracerouteError::NoIpv6),
                 Host::Domain(domain) => {
                     for ip in resolve(&domain)? {
@@ -82,11 +82,11 @@ impl Options {
     }
 
     pub fn get_masked(&self) -> Vec<u8> {
-        self.mask.to_owned().unwrap_or(vec![])
+        self.mask.to_owned().unwrap_or_default()
     }
 }
 
 /// Resolve a domain name to ip addresses
-fn resolve(domain: &String) -> Result<ResolveHost, TracerouteError> {
-    resolve_host(&domain).map_err(|err| TracerouteError::Io(err))
+fn resolve(domain: &str) -> Result<ResolveHost, TracerouteError> {
+    resolve_host(&domain).map_err(TracerouteError::Io)
 }

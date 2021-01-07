@@ -1,12 +1,26 @@
 use std::cmp::Ordering;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::net::IpAddr;
 
-#[derive(Copy, Clone, Hash)]
+#[derive(Copy, Clone)]
 pub enum Node {
     Hop(IpAddr),
     Hidden(u8, u16),
     Masked(u8),
+}
+
+impl Hash for Node {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Hop(ip) => ip.hash(state),
+            Self::Hidden(ttl, flowhash) => {
+                ttl.hash(state);
+                flowhash.hash(state);
+            }
+            Self::Masked(ttl) => ttl.hash(state),
+        }
+    }
 }
 
 impl fmt::Display for Node {

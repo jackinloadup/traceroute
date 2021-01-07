@@ -37,23 +37,25 @@ pub enum Protocol {
 
 pub fn get_default_source_ip() -> Result<Ipv4Addr, TracerouteError> {
     let default_interface = get_available_interfaces()
-        .iter()
-        .next()
-        .ok_or(TracerouteError::Io(io::Error::new(
-            io::ErrorKind::Other,
-            "No interfaces available",
-        )))?
+        .get(0)
+        .ok_or_else(|| {
+            TracerouteError::Io(io::Error::new(
+                io::ErrorKind::Other,
+                "No interfaces available",
+            ))
+        })?
         .clone();
 
     let source_ip = default_interface
         .ips
         .iter()
-        .filter(|i| i.is_ipv4())
-        .next()
-        .ok_or(TracerouteError::Io(io::Error::new(
-            io::ErrorKind::Other,
-            "Couldn't get interface IPv4 address",
-        )))?
+        .find(|i| i.is_ipv4())
+        .ok_or_else(|| {
+            TracerouteError::Io(io::Error::new(
+                io::ErrorKind::Other,
+                "Couldn't get interface IPv4 address",
+            ))
+        })?
         .ip();
 
     match source_ip {
@@ -73,11 +75,7 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
             .filter(|e| {
                 e.mac.is_some()
                     && e.mac.unwrap() != MacAddr::zero()
-                    && e.ips
-                        .iter()
-                        .filter(|ip| ip.ip().to_string() != "0.0.0.0")
-                        .next()
-                        .is_some()
+                    && e.ips.iter().any(|ip| ip.ip().to_string() != "0.0.0.0")
             })
             .collect()
     } else {
@@ -86,7 +84,7 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
             .filter(|e| {
                 e.is_up()
                     && !e.is_loopback()
-                    && e.ips.iter().filter(|ip| ip.is_ipv4()).next().is_some()
+                    && e.ips.iter().any(|ip| ip.is_ipv4())
                     && e.mac.is_some()
                     && e.mac.unwrap() != MacAddr::zero()
             })

@@ -63,8 +63,7 @@ impl Traceroute {
 
         // Set the protocol we are looking to recieve
         let protocol = Layer3(IpNextHeaderProtocols::Icmp);
-        let (mut tx, mut rx) =
-            transport_channel(4096, protocol).map_err(|err| TracerouteError::Io(err))?;
+        let (mut tx, mut rx) = transport_channel(4096, protocol).map_err(TracerouteError::Io)?;
 
         let targets = self.options.target_ips()?;
         let source = get_default_source_ip()?;
@@ -134,7 +133,7 @@ impl Traceroute {
                 sleep(Duration::from_millis(delay as u64));
 
                 tx.send_to(packet, IpAddr::V4(target))
-                    .map_err(|err| TracerouteError::Io(err))
+                    .map_err(TracerouteError::Io)
                     .and(Ok(probe))
             })
             .fold(Ok(HashMap::new()), |hashmap, probe: Result<Probe, _>| {

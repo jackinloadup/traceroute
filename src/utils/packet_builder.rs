@@ -80,7 +80,7 @@ fn build_ipv4_udp_packet(
 
     udp_header.set_source(source_port);
     udp_header.set_destination(port);
-    udp_header.set_length(32 as u16);
+    udp_header.set_length(32_u16);
     udp_header.set_payload(&[0; 24]);
 
     let checksum =

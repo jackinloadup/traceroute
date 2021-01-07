@@ -61,9 +61,9 @@ impl TracerouteResults {
     }
     pub fn write(&self, file: PathBuf) -> Result<(), TracerouteError> {
         let dot = Dot::new(&self.graph);
-        let mut file = File::create(file).map_err(|err| TracerouteError::Io(err))?;
+        let mut file = File::create(file).map_err(TracerouteError::Io)?;
         file.write_all(dot.to_string().as_bytes())
-            .map_err(|err| TracerouteError::Io(err))
+            .map_err(TracerouteError::Io)
     }
     pub fn compress() {}
     //pub fn flows() -> flow_map_t {
@@ -118,7 +118,7 @@ impl TracerouteResults {
         let mut graph = Graph::new();
         let source = graph.add_node(Node::Hop(source));
 
-        results.sort_by(|a, b| a.ttl().cmp(&b.ttl()));
+        results.sort_by_key(|a| a.ttl());
         let mut prev_node = source;
         let mut prev_ttl = 1;
 
@@ -156,6 +156,14 @@ impl TracerouteResults {
         }
 
         graph
+    }
+
+    pub fn source(&self) -> &IpAddr {
+        &self.source
+    }
+
+    pub fn target(&self) -> &Vec<IpAddr> {
+        &self.target
     }
 }
 

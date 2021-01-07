@@ -16,7 +16,7 @@ fn main() {
         None => io::stdout()
             .lock()
             .write_all(results.to_string().as_bytes())
-            .map_err(|err| TracerouteError::Io(err)),
+            .map_err(TracerouteError::Io),
         Some(file) => results.write(file),
     };
 
