@@ -3,8 +3,8 @@ use crate::utils::Protocol;
 use crate::TracerouteError;
 
 use pnet::packet::ip::IpNextHeaderProtocols;
-use pnet::packet::ipv4::{Ipv4Packet, MutableIpv4Packet};
-use pnet::packet::udp::MutableUdpPacket;
+use pnet::packet::ipv4::{self, Ipv4Packet, MutableIpv4Packet};
+use pnet::packet::udp::{self, MutableUdpPacket};
 use pnet::packet::MutablePacket;
 use rand::Rng;
 use std::net::Ipv4Addr;
@@ -19,12 +19,15 @@ pub fn build_ipv4_probe(
     ttl: u8,
     port: u16,
 ) -> Result<(Ipv4Packet, Probe), TracerouteError> {
-    let buf = vec![0u8; 66]; // FIXME length of 66 is from libtraceroute
+    // 24 is the size of the payload we attached to the udp packet;
+    let size =
+        MutableIpv4Packet::minimum_packet_size() + MutableUdpPacket::minimum_packet_size() + 24;
+
+    let buf = vec![0u8; size];
+    let mut ip_header = MutableIpv4Packet::owned(buf).ok_or(TracerouteError::MalformedPacket)?;
 
     // Generate random IPv4 packet id
     let ip_id = rand::thread_rng().gen();
-
-    let mut ip_header = MutableIpv4Packet::owned(buf).ok_or(TracerouteError::MalformedPacket)?;
 
     ip_header.set_version(4);
     ip_header.set_header_length(5);
@@ -34,7 +37,7 @@ pub fn build_ipv4_probe(
     ip_header.set_source(*source);
     ip_header.set_destination(destination_ip);
     ip_header.set_identification(ip_id);
-    ip_header.set_checksum(pnet::packet::ipv4::checksum(&ip_header.to_immutable()));
+    ip_header.set_checksum(ipv4::checksum(&ip_header.to_immutable()));
 
     //let source_port = rand::thread_rng().gen_range(49152, 65535);
     let source_port = 49153;
@@ -62,10 +65,10 @@ pub fn build_ipv4_probe(
         protocol => return Err(TracerouteError::UnimplimentedProtocol(protocol)),
     };
 
-    Ok((
-        ip_header.consume_to_immutable(),
-        Probe::new(ttl, ip_id, checksum, flowhash),
-    ))
+    let packet = ip_header.consume_to_immutable();
+    let probe = Probe::new(ttl, ip_id, checksum, flowhash);
+
+    Ok((packet, probe))
 }
 
 fn build_ipv4_udp_packet(
@@ -80,12 +83,34 @@ fn build_ipv4_udp_packet(
 
     udp_header.set_source(source_port);
     udp_header.set_destination(port);
+    // Question: Does calulating the packet sizes here a performance impact? or is it all inlined?
+    // 8 bytes for the udp header and 24 for the payload
     udp_header.set_length(32_u16);
-    udp_header.set_payload(&[0; 24]);
+    udp_header.set_payload(&[0_u8; 24]);
 
-    let checksum =
-        pnet::packet::udp::ipv4_checksum(&udp_header.to_immutable(), source, destination_ip);
+    let checksum = udp::ipv4_checksum(&udp_header.to_immutable(), source, destination_ip);
     udp_header.set_checksum(checksum);
 
     Ok(checksum)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_ipv4_probe() -> Result<(), String> {
+        let result = build_ipv4_probe(
+            Protocol::UDP,
+            &Ipv4Addr::LOCALHOST,
+            Ipv4Addr::UNSPECIFIED,
+            1,
+            1,
+        );
+        assert!(result.is_ok());
+        let (packet, probe) = result.unwrap();
+        assert_eq!(probe.ttl, packet.get_ttl());
+
+        Ok(())
+    }
 }
