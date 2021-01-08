@@ -43,6 +43,12 @@ pub struct Options {
     /// Output file name [default: stdout]
     #[structopt(short, long, parse(from_os_str))]
     pub output_file: Option<PathBuf>,
+    /// Silence all output
+    #[structopt(short = "q", long = "quiet")]
+    pub quiet: bool,
+    /// Verbose mode (-v, -vv, -vvv, etc)
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    pub verbose: usize,
     /// TTLs to assume Hidden
     #[structopt(long, use_delimiter = true)]
     mask: Option<Vec<u8>>,

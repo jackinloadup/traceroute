@@ -1,6 +1,7 @@
 //! Traceroute
 //!
 //!  Determine latency between self and destination
+extern crate log;
 extern crate petgraph;
 extern crate pnet;
 extern crate resolve;
@@ -30,6 +31,7 @@ use std::thread::sleep;
 pub use error::TracerouteError;
 pub use options::Options;
 
+use log::info;
 use utils::get_default_source_ip;
 use utils::packet_builder::build_ipv4_probe;
 pub use utils::Protocol;
@@ -82,7 +84,7 @@ impl Traceroute {
         source: Ipv4Addr,
         target: Ipv4Addr,
     ) -> Result<TracerouteResults, TracerouteError> {
-        eprintln!("Start trace for {}", target);
+        info!("Start trace for {}", target);
 
         let probes = self.sweep(&source, tx, target)?;
 

@@ -2,6 +2,7 @@ pub use super::Hop;
 pub use super::{Probe, ProbeResponse};
 use crate::utils::{Edge, Node};
 use crate::TracerouteError;
+use log::info;
 use petgraph::dot::Dot;
 use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
@@ -99,8 +100,8 @@ impl TracerouteResults {
         }
 
         match target_ttl {
-            Some(ttl) => eprintln!("Target TTL is {}", ttl),
-            None => eprintln!("Target wasn't found"),
+            Some(ttl) => info!("Target TTL is {}", ttl),
+            None => info!("Target wasn't found"),
         }
 
         // Loop through unmatch probes
