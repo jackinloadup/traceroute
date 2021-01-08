@@ -6,37 +6,39 @@ extern crate petgraph;
 extern crate pnet;
 extern crate resolve;
 
-pub mod error;
-pub mod options;
-pub mod utils;
+mod edge;
+mod error;
+mod node;
+mod options;
+mod utils;
 
-use std::time::Duration;
-use std::time::Instant;
+pub use edge::Edge;
+pub use error::TracerouteError;
+pub use node::Node;
+pub use options::Options;
+
+use utils::get_default_source_ip;
+use utils::packet_builder::build_ipv4_probe;
+use utils::Protocol;
+pub use utils::TracerouteResults;
+pub use utils::{Probe, ProbeResponse};
+
+use log::info;
 
 use pnet::packet::icmp::{IcmpPacket, IcmpTypes};
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::udp::UdpPacket;
 use pnet::packet::Packet;
-
 use pnet::transport::TransportChannelType::Layer3;
 use pnet::transport::{ipv4_packet_iter, transport_channel, TransportReceiver, TransportSender};
-use std::collections::HashMap;
 
+use std::collections::HashMap;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
-
 use std::thread::sleep;
-
-pub use error::TracerouteError;
-pub use options::Options;
-
-use log::info;
-use utils::get_default_source_ip;
-use utils::packet_builder::build_ipv4_probe;
-use utils::Protocol;
-pub use utils::TracerouteResults;
-pub use utils::{Probe, ProbeResponse};
+use std::time::Duration;
+use std::time::Instant;
 
 /// Provides management interface for traceroute
 pub struct Traceroute {

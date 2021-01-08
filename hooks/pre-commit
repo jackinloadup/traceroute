@@ -20,7 +20,7 @@ check_formatting() {
 
 check_clippy() {
         echo "See what clippy thinks";
-        OUTPUT=$(find -name "*.rs" -not -path "./target/*" -exec touch "{}" + && cargo clippy -- -D warnings);
+        OUTPUT=$(find -name "*.rs" -not -path "./target/*" -exec touch "{}" + && cargo clippy);
         ERROR_CODE=$?;
 
         if [[ $ERROR_CODE -gt 0 ]]

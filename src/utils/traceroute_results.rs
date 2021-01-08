@@ -1,7 +1,7 @@
 pub use super::Hop;
 pub use super::{Probe, ProbeResponse};
-use crate::utils::{Edge, Node};
 use crate::TracerouteError;
+use crate::{Edge, Node};
 use log::info;
 use petgraph::dot::Dot;
 use petgraph::graphmap::DiGraphMap;
