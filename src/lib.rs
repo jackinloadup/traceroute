@@ -34,7 +34,7 @@ pub use options::Options;
 use log::info;
 use utils::get_default_source_ip;
 use utils::packet_builder::build_ipv4_probe;
-pub use utils::Protocol;
+use utils::Protocol;
 pub use utils::TracerouteResults;
 pub use utils::{Probe, ProbeResponse};
 
