@@ -5,6 +5,7 @@ use std::time::Duration;
 pub enum Edge {
     TTL(u8),
     RTT(Duration),
+    Results(Duration, u8),
     Connected,
 }
 
@@ -13,6 +14,7 @@ impl fmt::Display for Edge {
         match self {
             Self::TTL(ttl) => write!(f, "TTL {}", ttl),
             Self::RTT(duration) => write!(f, "Latency {:?}", duration),
+            Self::Results(duration, ttl) => write!(f, "Latency {:?} @ {}", duration, ttl),
             Self::Connected => write!(f, ""),
         }
     }

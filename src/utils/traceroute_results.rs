@@ -116,15 +116,20 @@ impl TracerouteResults {
         //}
 
         let mut graph = Graph::new();
-        let source = graph.add_node(Node::Hop(source));
+        let source_node = graph.add_node(Node::Hop(source));
 
         results.sort_by_key(|a| a.ttl());
-        let mut prev_node = source;
+        let mut prev_node = source_node;
+        let mut prev_ip = source;
         let mut prev_ttl = 1;
 
         // for each matched hop
         for hop in results.iter() {
             let ttl = hop.ttl();
+
+            //let flow = Node::Flow(hop.flowhash());
+            //graph.add_node(flow);
+            //graph.add_edge(source, flow, Edge::Connected);
 
             // find any missing hops between this one and the last seen
             let hidden = ttl - prev_ttl;
@@ -133,25 +138,36 @@ impl TracerouteResults {
                 let new_node = if masked.contains(&hidden_ttl) {
                     Node::Masked(hidden_ttl)
                 } else {
-                    Node::Hidden(hidden_ttl, hop.flowhash())
+                    Node::Hidden(hidden_ttl, prev_ip)
                 };
                 graph.add_node(new_node);
                 graph.add_edge(prev_node, new_node, Edge::Connected);
+
+                // Add flow
+                //graph.add_edge(flow, new_node, Edge::Connected);
+
                 prev_node = new_node;
             }
 
             let new_node = graph.add_node(Node::Hop(hop.received()));
+
+            // Add flow
+            //graph.add_edge(flow, new_node, Edge::Results(hop.elapsed(), hop.ttl()));
+
+            //// Add flow
+            //graph.add_edge(flow, new_node, Edge::TTL(hop.ttl()));
 
             // if the last hop was the same distance make don't add an edge
             if new_node == prev_node {
                 prev_ttl = ttl;
                 continue;
             }
-            //graph.add_edge(source, index, Edge::RTT(hop.elapsed()));
+            //graph.add_edge(prev_node, new_node, Edge::RTT(hop.elapsed()));
             graph.add_edge(prev_node, new_node, Edge::Connected);
             //graph.add_edge(prev_node, new_node, Edge::TTL(hop.ttl()));
 
             prev_node = new_node;
+            prev_ip = hop.received();
             prev_ttl = ttl;
         }
 
