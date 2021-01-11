@@ -1,6 +1,11 @@
 //! Traceroute
 //!
-//!  Determine latency between self and destination
+//!  Determine path used by packets sent from self and destination.
+//!
+//!  It's important to note that we are only able to measure the path in a single direction. Some
+//!  sections of the path may be the same in either direction but other sections may come back a
+//!  completely different direction without our knowledge. The return path for our probe may not be
+//!  along the same path it came causing oddities in the probe latency. We don't yet detect this.
 extern crate log;
 extern crate petgraph;
 extern crate pnet;

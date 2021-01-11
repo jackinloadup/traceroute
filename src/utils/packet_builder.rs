@@ -42,6 +42,8 @@ pub fn build_ipv4_probe(
     //let source_port = rand::thread_rng().gen_range(49152, 65535);
     let source_port = 49153;
 
+    // IDEA: turn this information into a flow struct which can impl fn to get flowhash or hash of
+    // just src/dest which may be useful for graph building
     let mut hasher = DefaultHasher::new();
     hasher.write_u8(ip_header.get_dscp());
     hasher.write_u8(ip_header.get_ecn());

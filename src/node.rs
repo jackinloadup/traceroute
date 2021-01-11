@@ -3,6 +3,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::net::IpAddr;
 
+/// Node in the graph
 #[derive(Copy, Clone)]
 pub enum Node {
     Flow(u16),

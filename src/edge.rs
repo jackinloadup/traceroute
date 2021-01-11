@@ -1,6 +1,7 @@
 use std::fmt;
 use std::time::Duration;
 
+/// Edge in the graph
 #[derive(Clone)]
 pub enum Edge {
     TTL(u8),

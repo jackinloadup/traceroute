@@ -9,6 +9,7 @@ use resolve::resolve_host;
 
 use crate::TracerouteError;
 
+/// Contains configuration parameters
 #[derive(StructOpt, Debug)]
 #[structopt(name = "traceroute", about)]
 pub struct Options {

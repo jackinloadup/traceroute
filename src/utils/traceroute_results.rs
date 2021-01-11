@@ -15,6 +15,7 @@ use std::string::ToString;
 
 type Graph = DiGraphMap<Node, Edge>;
 
+/// Results from a traceroute run
 pub struct TracerouteResults {
     //flows: &flow_map_t,
     //min_ttl: u8,
@@ -60,15 +61,15 @@ impl TracerouteResults {
             target: vec![target],
         }
     }
+
+    /// Write graph to file in Dot format
     pub fn write(&self, file: PathBuf) -> Result<(), TracerouteError> {
         let dot = Dot::new(&self.graph);
         let mut file = File::create(file)?;
         Ok(file.write_all(dot.to_string().as_bytes())?)
     }
-    pub fn compress() {}
+    //pub fn compress() {}
     //pub fn flows() -> flow_map_t {
-    //}
-    //pub fn match_packet(Packet) -> &IpAddr {
     //}
 
     // TODO what to do when target isn't found
@@ -174,10 +175,12 @@ impl TracerouteResults {
         graph
     }
 
+    /// Get the Ip which sent the [`Probe`] packets
     pub fn source(&self) -> &IpAddr {
         &self.source
     }
 
+    /// Get list of Ips which were targeted during the traceroute
     pub fn target(&self) -> &Vec<IpAddr> {
         &self.target
     }

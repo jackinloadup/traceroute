@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::net::IpAddr;
 use std::time::Instant;
 
+/// Information sent in the packet which we can use to match against a [`ProbeResponse`]
 #[derive(Debug)]
 pub struct Probe {
     /// Transmit time
@@ -47,6 +48,7 @@ impl PartialOrd for Probe {
     }
 }
 
+/// Information received from the returned [`Probe`]
 pub struct ProbeResponse {
     /// Ip of the server which responded
     pub source: IpAddr,

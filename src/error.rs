@@ -4,6 +4,7 @@ use std::error::Error;
 use std::fmt;
 use std::io::{self, ErrorKind};
 
+/// Wrapper for all errors that can occur in this library
 #[derive(Debug)]
 pub enum TracerouteError {
     Io(io::Error),
