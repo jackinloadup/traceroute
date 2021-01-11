@@ -169,6 +169,11 @@ impl TracerouteResults {
 
 impl ToString for TracerouteResults {
     fn to_string(&self) -> String {
+        info!(
+            "Graph size: Nodes {}, Edged {}",
+            &self.graph.node_count(),
+            &self.graph.edge_count()
+        );
         format!("{}", Dot::new(&self.graph))
     }
 }
