@@ -1,17 +1,18 @@
 pub mod hop;
 pub mod packet_builder;
-pub mod probe;
-pub mod traceroute_results;
 
 pub use hop::Hop;
-pub use probe::{Probe, ProbeResponse};
-pub use traceroute_results::TracerouteResults;
 
 use crate::TracerouteError;
 
 use pnet::datalink::{MacAddr, NetworkInterface};
 use std::net::{IpAddr, Ipv4Addr};
 
+use pnet::packet::icmp::{IcmpPacket, IcmpTypes};
+use pnet::packet::ip::IpNextHeaderProtocols;
+use pnet::packet::ipv4::Ipv4Packet;
+use pnet::packet::udp::UdpPacket;
+use pnet::packet::Packet;
 use std::fmt;
 use std::io;
 
@@ -38,8 +39,9 @@ impl fmt::Display for Protocol {
 
 pub fn get_default_source_ip() -> Result<Ipv4Addr, TracerouteError> {
     let default_interface = get_available_interfaces()
-        .get(0)
+        .first()
         .ok_or_else(|| {
+            // io error may not be right for here maybe just a new traceroute error
             TracerouteError::Io(io::Error::new(
                 io::ErrorKind::Other,
                 "No interfaces available",
@@ -61,7 +63,7 @@ pub fn get_default_source_ip() -> Result<Ipv4Addr, TracerouteError> {
 
     match source_ip {
         IpAddr::V4(ip) => Ok(ip),
-        _ => Err(TracerouteError::Impossible("Not possible to get here")),
+        _ => unreachable!("ipv6 addresses have already been filtered out"),
     }
 }
 
@@ -83,7 +85,7 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
         all_interfaces
             .into_iter()
             .filter(|e| {
-                e.is_up()
+                e.is_lower_up()
                     && !e.is_loopback()
                     && e.ips.iter().any(|ip| ip.is_ipv4())
                     && e.mac.is_some()
@@ -91,6 +93,56 @@ pub fn get_available_interfaces() -> Vec<NetworkInterface> {
             })
             .collect()
     }
+}
+
+/// Unpack the incoming payload from an ICMP packet
+/// This payload should be the payload we sent to the destination via the echo request
+fn unpack_icmp_payload(payload: &[u8]) -> Result<(u16, u16), TracerouteError> {
+    let packet = Ipv4Packet::new(&payload[4..]).ok_or(TracerouteError::MalformedPacket)?;
+    let id = packet.get_identification();
+
+    let checksum = match packet.get_next_level_protocol() {
+        IpNextHeaderProtocols::Udp => UdpPacket::new(packet.payload())
+            .ok_or(TracerouteError::MalformedPacket)?
+            .get_checksum(),
+        _ => {
+            return Err(TracerouteError::UnmatchedPacket(
+                "icmp response was of an unknown type",
+            ))
+        }
+    };
+    Ok((id, checksum))
+}
+
+/// Process incoming ICMP packet and handle unexpected results
+fn handle_icmp_packet(packet: &[u8]) -> Result<(u16, u16), TracerouteError> {
+    let icmp_packet = IcmpPacket::new(packet).ok_or(TracerouteError::MalformedPacket)?;
+
+    let payload = icmp_packet.payload();
+
+    match icmp_packet.get_icmp_type() {
+        IcmpTypes::TimeExceeded | IcmpTypes::EchoReply | IcmpTypes::DestinationUnreachable => {
+            unpack_icmp_payload(payload)
+        }
+        icmp_type => Err(TracerouteError::ICMPTypeUnexpected(icmp_type)),
+    }
+}
+
+/// Processes incoming IPv4 packet and passes it on to transport layer packet handler.
+pub fn handle_ipv4_packet(header: Ipv4Packet) -> Result<(IpAddr, u16, u16), TracerouteError> {
+    let source = IpAddr::V4(header.get_source());
+    let payload = header.payload();
+
+    let (id, checksum) = match header.get_next_level_protocol() {
+        IpNextHeaderProtocols::Icmp => handle_icmp_packet(payload)?,
+        // Any packets hitting here are actually for another application
+        _ => {
+            return Err(TracerouteError::UnmatchedPacket(
+                "pnet is sending us packets we didn't request",
+            ))
+        }
+    };
+    Ok((source, id, checksum))
 }
 //pub struct UdpResponse {
 //    /// Outer Ip header source

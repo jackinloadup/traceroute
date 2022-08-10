@@ -1,12 +1,10 @@
+use crate::probe::ProbeSent;
 use std::cmp::Ordering;
-use std::net::IpAddr;
 use std::time::Instant;
 
-/// Information sent in the packet which we can use to match against a [`ProbeResponse`]
+/// Information to correlate a sent packet to it's response
 #[derive(Debug)]
 pub struct Probe {
-    /// Transmit time
-    pub instant: Instant,
     /// TCP ttl value which will control how many hops until the packet is returned to sender
     pub ttl: u8,
     /// TCP identification
@@ -20,11 +18,28 @@ pub struct Probe {
 impl Probe {
     pub fn new(ttl: u8, id: u16, checksum: u16, flowhash: u16) -> Self {
         Self {
-            instant: Instant::now(),
             ttl,
             id,
             checksum,
             flowhash,
+        }
+    }
+
+    /// Mark the moment the Probe is sent
+    pub fn sent(self) -> ProbeSent {
+        let Self {
+            ttl,
+            id,
+            checksum,
+            flowhash,
+        } = self;
+
+        ProbeSent {
+            ttl,
+            id,
+            checksum,
+            flowhash,
+            instant: Instant::now(),
         }
     }
 }
@@ -45,28 +60,5 @@ impl Ord for Probe {
 impl PartialOrd for Probe {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-/// Information received from the returned [`Probe`]
-pub struct ProbeResponse {
-    /// Ip of the server which responded
-    pub source: IpAddr,
-    /// Id of the ip packet
-    pub id: u16,
-    /// Checksum of the embdedded udp packet
-    pub checksum: u16,
-    /// Time when the probe returned
-    pub instant: Instant,
-}
-
-impl ProbeResponse {
-    pub fn new(source: IpAddr, id: u16, checksum: u16) -> Self {
-        Self {
-            source,
-            id,
-            checksum,
-            instant: Instant::now(),
-        }
     }
 }

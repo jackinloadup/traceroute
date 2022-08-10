@@ -6,6 +6,7 @@ use log::info;
 use petgraph::dot::Dot;
 use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs::File;
 use std::io::Write;
 use std::net::IpAddr;
@@ -28,10 +29,10 @@ pub struct TracerouteResults {
 }
 
 impl TracerouteResults {
-    pub fn default(source: IpAddr) -> Self {
+    pub fn default(source: IpAddr, target: Vec<IpAddr>) -> Self {
         TracerouteResults {
             source,
-            target: vec![],
+            target,
             graph: Graph::new(),
         }
     }
@@ -184,16 +185,32 @@ impl TracerouteResults {
     pub fn target(&self) -> &Vec<IpAddr> {
         &self.target
     }
+
+    /// Get graph created durring the traceroute
+    pub fn graph(&self) -> &Graph {
+        &self.graph
+    }
+
+    pub fn to_dot(&self) -> String {
+        //info!(
+        //    "Graph size: Nodes {}, Edged {}",
+        //    &self.graph.node_count(),
+        //    &self.graph.edge_count()
+        //);
+        format!("{}", Dot::new(&self.graph))
+    }
 }
 
-impl ToString for TracerouteResults {
-    fn to_string(&self) -> String {
-        info!(
-            "Graph size: Nodes {}, Edged {}",
-            &self.graph.node_count(),
-            &self.graph.edge_count()
-        );
-        format!("{}", Dot::new(&self.graph))
+impl fmt::Display for TracerouteResults {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Traceroute results from {} to {:?} resulting in {} nodes and {} edges",
+            self.source,
+            self.target,
+            self.graph.node_count(),
+            self.graph.edge_count()
+        )
     }
 }
 

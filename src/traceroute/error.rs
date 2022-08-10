@@ -14,6 +14,7 @@ pub enum TracerouteError {
     NoIpv6,
     Impossible(&'static str),
     UnimplimentedProtocol(Protocol),
+    ChannelUnexpectedlyClosed,
 }
 
 //impl TracerouteError {
@@ -62,17 +63,20 @@ impl fmt::Display for TracerouteError {
                     "Couldn't open network: {:?}. Try again with sudo or boost this executable privilages with setcap cap_net_admin+ep",
                     err.kind()
                 ),
-                _ => write!(f, "Failed with unhandled error: {}", err),
+                _ => write!(f, "failed with unhandled error: {}", err),
             },
             Self::Impossible(ref err) => write!(f, "impossible error: {}", err),
             Self::UnmatchedPacket(ref err) => write!(f, "unmatched packet: {}", err),
-            Self::MalformedPacket => write!(f, "Malformed packet"),
-            Self::NoIpv6 => write!(f, "Ipv6 not yet supported"),
+            Self::MalformedPacket => write!(f, "malformed packet"),
+            Self::NoIpv6 => write!(f, "ipv6 not yet supported"),
             Self::UnimplimentedProtocol(proto) => {
                 write!(f, "{} probe is unimplimented", proto)
-            }
+            },
             Self::ICMPTypeUnexpected(_icmp_type) => {
                 write!(f, "ran into an unimplimented ICMP type")
+            },
+            Self::ChannelUnexpectedlyClosed => {
+                write!(f, "channel unexptectedly closed")
             }
         }
     }

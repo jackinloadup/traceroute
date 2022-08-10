@@ -12,11 +12,11 @@ Deduce latency of hops and target.
 Use collected data to build directed graph of percieved network.
 
 ## Non-Goals
- - TBD
+- TBD
 
 ## Known Related Projects
 ### [dublin traceroute](https://github.com/insomniacslk/dublin-traceroute) [traceroute] [c++] [go]
- Dublin Traceroute is a NAT-aware multipath traceroute
+Dublin Traceroute is a NAT-aware multipath traceroute
 
 ### [traceroute-rs](https://github.com/daniellockyer/traceroute-rs) [traceroute] [rust]
 Traceroute implemented in ~165 lines of rust
@@ -30,5 +30,5 @@ Toy repo
 ### [libtraceroute](https://github.com/ilyagrishkov/libtraceroute) [traceroute] [rust]
 
 ### [ping.rs](https://gist.github.com/nixpulvis/e2938d03d141990d99db) [ping] [rust]
- A simple Ping implementation in Rust. 83 lines of rust
+A simple Ping implementation in Rust. 83 lines of rust
 

@@ -2,18 +2,29 @@
 name = "traceroute"
 version = "0.1.0"
 authors = ["Lucas Riutzel <lriutzel@gmail.com>"]
-edition = "2018"
+edition = "2021"
+keywords = ["network", "traceroute", "icmp"]
+categories = ["network-programming"]
 description = "Network diagnostic tool to capture route and transit delay of packets."
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 log = "0.4.11"
-petgraph = "0.5.1"
-pnet = "0.26"
-pnet_macros_support = "0.26"
-rand = "0.7"
-resolve = "0.2"
-stderrlog = "0.5.0"
-structopt = "0.3"
+petgraph = "0.6.1"
+pnet_macros_support = "0.31"
+rand = "0.8"
 url = "2.2"
+
+[dependencies.pnet]
+version = "0.31"
+features = ["std"]
+
+[dependencies.async-std]
+version = "1.12.0"
+features = ["unstable"]
+
+[dev-dependencies]
+async-std = { version = "1.12.0", features = ["attributes"] }
+stderrlog = "0.5.0"

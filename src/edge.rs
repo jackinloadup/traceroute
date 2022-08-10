@@ -2,7 +2,7 @@ use std::fmt;
 use std::time::Duration;
 
 /// Edge in the graph
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Edge {
     TTL(u8),
     RTT(Duration),
