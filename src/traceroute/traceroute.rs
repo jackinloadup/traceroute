@@ -1,5 +1,5 @@
 use crate::sockets::Sockets;
-use crate::trace::{Trace, TraceOptions, TraceType};
+use crate::trace::{Trace, TraceOptions};
 use crate::traceroute::{TraceAgent, TracerouteError};
 use log::*;
 use std::net::IpAddr;
@@ -38,18 +38,10 @@ impl Traceroute {
         source: IpAddr,
         destination: IpAddr,
         options: TraceOptions,
-    ) -> Result<TraceType, TracerouteError> {
+    ) -> Result<Trace, TracerouteError> {
         let packet_sender = self.sockets.packet_sender();
         info!("Start trace for {}", destination);
 
-        match (destination, source) {
-            (IpAddr::V4(destination), IpAddr::V4(source)) => {
-                Trace::new(options, source, destination, packet_sender)
-            }
-            (IpAddr::V6(_target), IpAddr::V6(_source)) => Err(TracerouteError::NoIpv6),
-            _ => Err(TracerouteError::Impossible(
-                "Tried to create a trace with a mix of ipv4 and ipv6 addresses",
-            )),
-        }
+        Trace::new(options, source, destination, packet_sender)
     }
 }

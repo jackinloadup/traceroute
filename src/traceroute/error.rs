@@ -12,38 +12,10 @@ pub enum TracerouteError {
     ICMPTypeUnexpected(IcmpType),
     MalformedPacket,
     NoIpv6,
-    Impossible(&'static str),
     UnimplimentedProtocol(Protocol),
     ChannelUnexpectedlyClosed,
+    IpProtocolMismatch,
 }
-
-//impl TracerouteError {
-//    fn as_str(&self) -> &str {
-//        match error {
-//            TracerouteError::Io(err) => match err.kind() {
-//                ErrorKind::PermissionDenied => format!(
-//                    "Couldn't open network: {:?}. Try again with sudo",
-//                    err.kind()
-//                ),
-//                ErrorKind::Other => match err.into_inner() {
-//                    Some(err) => format!("Failed: {}", err),
-//                    None => format!("Failed with unhandled error"),
-//                },
-//                err_kind => format!("Failed with unhandled error: {:?}", err_kind),
-//            },
-//            TracerouteError::Impossible(err) | TracerouteError::UnmatchedPacket(err) => {
-//                format!("Failed: {:?}", err)
-//            }
-//            TracerouteError::ICMPTypeUnexpected(_)
-//            | TracerouteError::PacketDecode
-//            | TracerouteError::MalformedPacket => format!("Failed decoding received packets"),
-//            TracerouteError::NoIpv6 => format!("No support for ipv6 yet"),
-//            TracerouteError::UnimplimentedProtocol(proto) => {
-//                format!("No support for {:?} probes yet", proto)
-//            }
-//        }
-//    }
-//}
 
 impl Error for TracerouteError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -65,7 +37,6 @@ impl fmt::Display for TracerouteError {
                 ),
                 _ => write!(f, "failed with unhandled error: {}", err),
             },
-            Self::Impossible(ref err) => write!(f, "impossible error: {}", err),
             Self::UnmatchedPacket(ref err) => write!(f, "unmatched packet: {}", err),
             Self::MalformedPacket => write!(f, "malformed packet"),
             Self::NoIpv6 => write!(f, "ipv6 not yet supported"),
@@ -75,9 +46,8 @@ impl fmt::Display for TracerouteError {
             Self::ICMPTypeUnexpected(_icmp_type) => {
                 write!(f, "ran into an unimplimented ICMP type")
             },
-            Self::ChannelUnexpectedlyClosed => {
-                write!(f, "channel unexptectedly closed")
-            }
+            Self::ChannelUnexpectedlyClosed => write!(f, "channel unexptectedly closed"),
+            Self::IpProtocolMismatch => write!(f, "attempted to use ipv4 with ipv6"),
         }
     }
 }

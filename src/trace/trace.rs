@@ -13,23 +13,8 @@ use pnet::packet::ipv4::Ipv4Packet;
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
-
-#[derive(Debug)]
-pub enum TraceType {
-    V4(Trace<Ipv4Addr>),
-    V6(Trace<Ipv6Addr>),
-}
-
-impl TraceType {
-    pub fn probes_sent(&self) -> usize {
-        match self {
-            Self::V4(trace) => trace.probes_sent(),
-            Self::V6(_trace) => todo!(),
-        }
-    }
-}
 
 // couldn't figure this out yet, maybe wrong way to go about it
 //impl Deref for TraceType {
@@ -45,16 +30,16 @@ impl TraceType {
 
 /// Perform trace from a source to destination
 #[derive(Debug)]
-pub struct Trace<I> {
-    source: I,
+pub struct Trace {
+    source: IpAddr,
     source_port: u16,
-    destination: I,
+    destination: IpAddr,
     destination_port: u16,
     probes_sent: usize,
     activity_receiver: Receiver<TraceResult>,
 }
 
-impl PartialEq for Trace<Ipv4Addr> {
+impl PartialEq for Trace {
     fn eq(&self, other: &Self) -> bool {
         self.source == other.source
             && self.source_port == other.source_port
@@ -62,32 +47,41 @@ impl PartialEq for Trace<Ipv4Addr> {
             && self.destination_port == other.destination_port
     }
 }
-impl Eq for Trace<Ipv4Addr> {}
+impl Eq for Trace {}
 
-impl Trace<Ipv4Addr> {
+impl Trace {
     pub fn new(
         options: TraceOptions,
-        source: Ipv4Addr,
-        destination: Ipv4Addr,
+        source: IpAddr,
+        destination: IpAddr,
         packet_sender: Sender<ProbeRequest<'_>>,
-    ) -> Result<TraceType, TracerouteError> {
+    ) -> Result<Self, TracerouteError> {
         let source_port = options.src_port;
         let destination_port = options.dst_port;
         let (activity_sender, activity_receiver) = channel();
-        let probes_sent =
-            Self::probe_request(options, packet_sender, activity_sender, source, destination)?;
+        let probes_sent = match (source, destination) {
+            (IpAddr::V4(source), IpAddr::V4(destination)) => Self::ipv4_probe_request(
+                options,
+                packet_sender,
+                activity_sender,
+                source,
+                destination,
+            )?,
+            (IpAddr::V6(_source), IpAddr::V6(_destination)) => Err(TracerouteError::NoIpv6)?,
+            _ => Err(TracerouteError::IpProtocolMismatch)?,
+        };
 
-        Ok(TraceType::V4(Self {
+        Ok(Self {
             source,
             source_port,
             destination,
             destination_port,
             probes_sent,
             activity_receiver,
-        }))
+        })
     }
 
-    fn probe_request(
+    fn ipv4_probe_request(
         options: TraceOptions,
         packet_sender: Sender<ProbeRequest<'_>>,
         activity_sender: Sender<TraceResult>,
@@ -137,10 +131,7 @@ impl Trace<Ipv4Addr> {
     }
 }
 
-impl<I> Trace<I>
-where
-    I: Hash,
-{
+impl Trace {
     pub fn flowhash(&self) -> u16 {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
@@ -148,10 +139,7 @@ where
     }
 }
 
-impl<I> Hash for Trace<I>
-where
-    I: Hash,
-{
+impl Hash for Trace {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
         // dscp
@@ -167,7 +155,7 @@ where
     }
 }
 
-impl<I> Stream for Trace<I> {
+impl Stream for Trace {
     type Item = Result<TraceActivity, TracerouteError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {

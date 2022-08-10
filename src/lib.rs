@@ -11,7 +11,7 @@
 //!
 //! ```
 //! use std::net::{IpAddr, Ipv4Addr};
-//! use traceroute::{Traceroute, TraceOptions, TraceType, TraceActivity};
+//! use traceroute::{Traceroute, TraceOptions, TraceActivity};
 //! use async_std::stream::StreamExt;
 //! use async_std::task::block_on;
 //!
@@ -19,11 +19,7 @@
 //! let source = traceroute.addresses().first().unwrap().clone();
 //! let destination = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 //! let options = TraceOptions::default();
-//! let trace = traceroute.trace(source, destination, options)?;
-//! let mut trace = match trace {
-//!     TraceType::V4(trace) => trace,
-//!     _ => unimplemented!(),
-//! };
+//! let mut trace = traceroute.trace(source, destination, options)?;
 //!
 //! // First activity received
 //! let activity = block_on(trace.next()).unwrap()?;
@@ -45,4 +41,4 @@ pub use self::traceroute::{TraceAgent, Traceroute, TracerouteError};
 pub use edge::Edge;
 pub use node::Node;
 pub use probe::{Probe, ProbeBundle, ProbeRequest, ProbeResponse, ProbeSent};
-pub use trace::{Trace, TraceActivity, TraceOptions, TraceResponse, TraceResult, TraceType};
+pub use trace::{Trace, TraceActivity, TraceOptions, TraceResponse, TraceResult};
