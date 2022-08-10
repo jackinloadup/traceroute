@@ -16,18 +16,6 @@ use std::hash::{Hash, Hasher};
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 
-// couldn't figure this out yet, maybe wrong way to go about it
-//impl Deref for TraceType {
-//    type Target = Trace<I>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        match self {
-//            Self::V4(trace) => trace,
-//            Self::V6(trace) => trace,
-//        }
-//    }
-//}
-
 /// Perform trace from a source to destination
 #[derive(Debug)]
 pub struct Trace {
