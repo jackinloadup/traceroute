@@ -37,7 +37,7 @@ mod trace;
 mod traceroute;
 mod utils;
 
-pub use self::traceroute::{TraceAgent, Traceroute, TracerouteError};
+pub use self::traceroute::{Traceroute, TracerouteError};
 pub use edge::Edge;
 pub use node::Node;
 pub use probe::{Probe, ProbeBundle, ProbeRequest, ProbeResponse, ProbeSent};

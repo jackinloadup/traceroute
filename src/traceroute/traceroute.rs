@@ -1,9 +1,8 @@
 use crate::sockets::Sockets;
 use crate::trace::{Trace, TraceOptions};
-use crate::traceroute::{TraceAgent, TracerouteError};
+use crate::traceroute::TracerouteError;
 use log::*;
 use std::net::IpAddr;
-use std::sync::Arc;
 
 /// Interface to init the network and create [`Trace`s](Trace)
 ///
@@ -20,11 +19,10 @@ pub struct Traceroute {
 
 impl Traceroute {
     /// Create a new traceroute engine
-    pub fn new() -> Result<TraceAgent, TracerouteError> {
+    pub fn new() -> Result<Self, TracerouteError> {
         let sockets = Sockets::new()?;
 
-        let tr = Self { sockets };
-        Ok(Arc::new(tr))
+        Ok(Self { sockets })
     }
 
     /// Get available system addresses which can be used as the source for a trace
