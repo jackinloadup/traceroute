@@ -83,6 +83,14 @@ impl Trace {
         // Get a list of all distances we are trying to probe
         let range = options.get_ttl_range();
 
+        // Send activity of masked ttls
+        for ttl in options.get_masked() {
+            let _ = activity_sender
+                .send(Ok(TraceActivity::Masked(ttl)))
+                .unwrap();
+        }
+
+        // Build packets and place them into probe bundles
         let bundles: Vec<ProbeBundle<Ipv4Packet<'_>>> = range
             .iter()
             .map(|ttl| {
