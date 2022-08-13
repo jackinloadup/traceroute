@@ -3,14 +3,16 @@ use std::fmt;
 /// Protocol to be used for traceroute
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Protocol {
-    /// UDP-based traceroute
+    /// User Datagram Protocol
     UDP,
-    /// TCP-based traceroute
+    /// Transmission Control Protocol
     TCP,
-    /// ICMP-based traceroute
+    /// Internet Control Message Protocol
     ICMP,
-    /// DCCP-based traceroute
+    /// Datagram Congestion Control Protocol
     DCCP,
+    /// Stream Control Transmission Protocol
+    SCTP,
 }
 
 impl fmt::Display for Protocol {
