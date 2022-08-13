@@ -4,6 +4,7 @@ mod protocol;
 //pub use hop::Hop;
 pub use protocol::Protocol;
 
+use crate::probe::{Checksum, TcpId};
 use crate::TracerouteError;
 
 use pnet::datalink::{MacAddr, NetworkInterface};
@@ -110,7 +111,9 @@ fn handle_icmp_packet(packet: &[u8]) -> Result<(u16, u16), TracerouteError> {
 }
 
 /// Processes incoming IPv4 packet and passes it on to transport layer packet handler.
-pub fn handle_ipv4_packet(header: Ipv4Packet) -> Result<(IpAddr, u16, u16), TracerouteError> {
+pub fn handle_ipv4_packet(
+    header: Ipv4Packet,
+) -> Result<(IpAddr, TcpId, Checksum), TracerouteError> {
     let source = IpAddr::V4(header.get_source());
     let payload = header.payload();
 

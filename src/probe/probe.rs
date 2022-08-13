@@ -2,21 +2,23 @@ use crate::probe::ProbeSent;
 use std::cmp::Ordering;
 use std::time::Instant;
 
+use super::{Checksum, Flowhash, TcpId, TTL};
+
 /// Information to correlate a sent packet to it's response
 #[derive(Debug)]
 pub struct Probe {
     /// TCP ttl value which will control how many hops until the packet is returned to sender
-    pub ttl: u8,
+    pub ttl: TTL,
     /// TCP identification
-    pub id: u16,
+    pub id: TcpId,
     /// Checksum of inner UDP probe
-    pub checksum: u16,
+    pub checksum: Checksum,
     /// Flowhash
-    pub flowhash: u16,
+    pub flowhash: Flowhash,
 }
 
 impl Probe {
-    pub fn new(ttl: u8, id: u16, checksum: u16, flowhash: u16) -> Self {
+    pub fn new(ttl: TTL, id: TcpId, checksum: Checksum, flowhash: Flowhash) -> Self {
         Self {
             ttl,
             id,

@@ -1,3 +1,4 @@
+use crate::probe::TcpId;
 use crate::utils::handle_ipv4_packet;
 use crate::{ProbeResponse, TraceActivity, TraceResponse, TraceResult, TracerouteError};
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -30,13 +31,13 @@ pub enum SocketReceivers {
 impl SocketReceivers {
     pub fn receive(
         &mut self,
-        probe_receiver: Receiver<(u16, Sender<TraceResult>)>,
+        probe_receiver: Receiver<(TcpId, Sender<TraceResult>)>,
         runnable: Arc<AtomicBool>,
     ) -> Result<(), TracerouteError> {
         // Wait for new packets from the outside world
         let timeout = Duration::from_millis(100);
 
-        let mut probes: HashMap<u16, Sender<TraceResult>> = HashMap::new();
+        let mut probes: HashMap<TcpId, Sender<TraceResult>> = HashMap::new();
         while runnable.load(Ordering::SeqCst) {
             if let Self::V4(socket) = self {
                 let mut packet_iter = ipv4_packet_iter(&mut socket.rx);

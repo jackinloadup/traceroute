@@ -1,3 +1,4 @@
+use crate::probe::TcpId;
 use crate::{ProbeBundle, ProbeRequest, TraceActivity, TraceResult, TracerouteError};
 use core::sync::atomic::{AtomicBool, Ordering};
 use log::*;
@@ -71,7 +72,7 @@ impl SocketSenders {
     pub fn send(
         &mut self,
         packet_receiver: Receiver<ProbeRequest<'_>>,
-        probe_sender: Sender<(u16, Sender<TraceResult>)>,
+        probe_sender: Sender<(TcpId, Sender<TraceResult>)>,
         runnable: Arc<AtomicBool>,
     ) -> Result<(), TracerouteError> {
         while runnable.load(Ordering::SeqCst) {

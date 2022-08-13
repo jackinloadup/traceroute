@@ -1,6 +1,8 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::Instant;
 
+use super::{Checksum, TcpId};
+
 /// Information received from the returned [`ProbeSent`](crate::probe::ProbeSent)
 #[derive(Debug)]
 pub enum ProbeResponse {
@@ -8,10 +10,10 @@ pub enum ProbeResponse {
     V4 {
         /// Ip of the server which responded
         source: Ipv4Addr,
-        /// Id of the ip packet
-        id: u16,
+        /// TCP identification
+        id: TcpId,
         /// Checksum of the embdedded udp packet
-        checksum: u16,
+        checksum: Checksum,
         /// Time when the probe returned
         instant: Instant,
     },
@@ -20,16 +22,16 @@ pub enum ProbeResponse {
         /// Ip of the server which responded
         source: Ipv6Addr,
         /// Id of the ip packet
-        id: u16,
+        id: TcpId,
         /// Checksum of the embdedded udp packet
-        checksum: u16,
+        checksum: Checksum,
         /// Time when the probe returned
         instant: Instant,
     },
 }
 
 impl ProbeResponse {
-    pub fn new(source: IpAddr, id: u16, checksum: u16, instant: Instant) -> Self {
+    pub fn new(source: IpAddr, id: TcpId, checksum: Checksum, instant: Instant) -> Self {
         match source {
             IpAddr::V4(source) => Self::V4 {
                 source,
@@ -53,14 +55,14 @@ impl ProbeResponse {
         }
     }
 
-    pub fn get_id(&self) -> &u16 {
+    pub fn get_id(&self) -> &TcpId {
         match self {
             Self::V4 { id, .. } => id,
             Self::V6 { id, .. } => id,
         }
     }
 
-    pub fn get_checksum(&self) -> &u16 {
+    pub fn get_checksum(&self) -> &Checksum {
         match self {
             Self::V4 { checksum, .. } => checksum,
             Self::V6 { checksum, .. } => checksum,
