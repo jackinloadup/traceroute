@@ -1,6 +1,8 @@
 pub mod hop;
+mod protocol;
 
 pub use hop::Hop;
+pub use protocol::Protocol;
 
 use crate::TracerouteError;
 
@@ -12,29 +14,9 @@ use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::udp::UdpPacket;
 use pnet::packet::Packet;
-use std::fmt;
 use std::io;
 
 //use std::collections::HashMap;
-
-/// Protocol to be used for traceroute
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Protocol {
-    /// UDP-based traceroute
-    UDP,
-    /// TCP-based traceroute
-    TCP,
-    /// ICMP-based traceroute
-    ICMP,
-    /// DCCP-based traceroute
-    DCCP,
-}
-
-impl fmt::Display for Protocol {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?} protocol", self)
-    }
-}
 
 pub fn get_default_source_ip() -> Result<Ipv4Addr, TracerouteError> {
     let default_interface = get_available_interfaces()
