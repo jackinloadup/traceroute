@@ -7,13 +7,20 @@ use std::io::{self, ErrorKind};
 /// Wrapper for all errors that can occur in this library
 #[derive(Debug)]
 pub enum TracerouteError {
+    /// Recieved an [`io::Error`]
     Io(io::Error),
     UnmatchedPacket(&'static str),
     ICMPTypeUnexpected(IcmpType),
+    /// A malformed packet was encountered
     MalformedPacket,
+    /// This library doesn't currently support Ipv6
     NoIpv6,
+    /// Attempted to use a protocol not yet supported
     UnimplimentedProtocol(Protocol),
+    /// A channel was unexptectedly closed
     ChannelUnexpectedlyClosed,
+    /// An invalid trace was created which used an Ipv4 and Ipv6 address for the source and
+    /// destination
     IpProtocolMismatch,
 }
 
@@ -38,8 +45,8 @@ impl fmt::Display for TracerouteError {
                 _ => write!(f, "failed with unhandled error: {}", err),
             },
             Self::UnmatchedPacket(ref err) => write!(f, "unmatched packet: {}", err),
-            Self::MalformedPacket => write!(f, "malformed packet"),
-            Self::NoIpv6 => write!(f, "ipv6 not yet supported"),
+            Self::MalformedPacket => write!(f, "a malformed packet was encounted"),
+            Self::NoIpv6 => write!(f, "ipv6 is not yet supported"),
             Self::UnimplimentedProtocol(proto) => {
                 write!(f, "{} probe is unimplimented", proto)
             },

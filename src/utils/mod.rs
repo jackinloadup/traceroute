@@ -89,7 +89,7 @@ fn unpack_icmp_payload(payload: &[u8]) -> Result<(u16, u16), TracerouteError> {
             .get_checksum(),
         _ => {
             return Err(TracerouteError::UnmatchedPacket(
-                "icmp response was of an unknown type",
+                "incoming icmp payload is not a UDP packet",
             ))
         }
     };
