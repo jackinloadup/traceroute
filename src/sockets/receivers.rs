@@ -42,6 +42,11 @@ impl SocketReceivers {
             if let Self::V4(socket) = self {
                 let mut packet_iter = ipv4_packet_iter(&mut socket.rx);
                 loop {
+                    // Check for new probe
+                    while let Ok((id, sender)) = probe_receiver.try_recv() {
+                        probes.insert(id, sender);
+                    }
+
                     // Handle packets until timeout
                     let option = packet_iter
                         .next_with_timeout(timeout)
@@ -55,10 +60,6 @@ impl SocketReceivers {
                     // The moment we awknoledge the packet is received
                     let instant = Instant::now();
 
-                    // Check for new probes
-                    while let Ok((id, sender)) = probe_receiver.try_recv() {
-                        probes.insert(id, sender);
-                    }
 
                     if let Ok((source, id, checksum)) = handle_ipv4_packet(packet) {
                         // Match packet and return
