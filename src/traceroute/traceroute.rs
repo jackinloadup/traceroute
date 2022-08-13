@@ -1,4 +1,4 @@
-use crate::sockets::Sockets;
+use crate::sockets::{SocketJoinResult, Sockets};
 use crate::trace::{Trace, TraceOptions};
 use crate::traceroute::TracerouteError;
 use log::*;
@@ -6,7 +6,10 @@ use std::net::IpAddr;
 
 /// Interface to init the network and create [`Trace`s](Trace)
 ///
-/// Drop to close network sockets
+/// # Panics
+/// The [`close()`](Traceroute::close) fn must be run before drop to capture any panics that came
+/// from the socket threads. This shouldn't happen but in the case it does there is a way to handle
+/// it from within the application logic and not here.
 
 // Provides management interface for traceroute
 // TODO bind/unbind interface?
@@ -28,6 +31,15 @@ impl Traceroute {
     /// Get available system addresses which can be used as the source for a trace
     pub fn addresses(&self) -> &Vec<IpAddr> {
         self.sockets.addresses()
+    }
+
+    /// Close network connections
+    ///
+    /// This must be run before drop to capture any panics that came from the socket threads.
+    /// This shouldn't happen but in the case it does there is a way to handle it from within
+    /// the application logic and not here.
+    pub fn close(&mut self) -> SocketJoinResult {
+        self.sockets.close()
     }
 
     /// Run a trace against a single target.

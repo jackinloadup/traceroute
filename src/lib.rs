@@ -11,11 +11,12 @@
 //!
 //! ```
 //! use std::net::{IpAddr, Ipv4Addr};
+//! use std::panic;
 //! use traceroute::{Traceroute, TraceOptions, TraceActivity};
 //! use async_std::stream::StreamExt;
 //! use async_std::task::block_on;
 //!
-//! let traceroute = Traceroute::new()?;
+//! let mut traceroute = Traceroute::new()?;
 //! let source = traceroute.addresses().first().unwrap().clone();
 //! let destination = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 //! let options = TraceOptions::default();
@@ -23,6 +24,15 @@
 //!
 //! // First activity received
 //! let activity = block_on(trace.next()).unwrap()?;
+//!
+//! // Close the network sockets
+//! for thread_result in traceroute.close() {
+//!     match thread_result {
+//!        Ok(result) => result?,
+//!        // We should never panic
+//!        Err(e) => panic::resume_unwind(e),
+//!     }
+//! }
 //! # Ok::<(), traceroute::TracerouteError>(())
 //! ```
 extern crate log;
@@ -42,4 +52,5 @@ pub use self::traceroute::{Traceroute, TracerouteError};
 pub use edge::Edge;
 pub use node::Node;
 pub use probe::{Probe, ProbeBundle, ProbeRequest, ProbeResponse, ProbeSent};
+pub use sockets::SocketJoinResult;
 pub use trace::{Trace, TraceActivity, TraceOptions, TraceResponse, TraceResult};

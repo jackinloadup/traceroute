@@ -4,4 +4,4 @@ mod sockets;
 
 use receivers::{SocketReceiver, SocketReceivers};
 use senders::{SocketSender, SocketSenders};
-pub use sockets::Sockets;
+pub use sockets::{SocketJoinResult, Sockets};

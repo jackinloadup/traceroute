@@ -5,11 +5,13 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::transport::transport_channel;
 use pnet::transport::TransportChannelType::Layer3;
+use std::any::Any;
 use std::net::{IpAddr, Ipv6Addr};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
-use std::thread;
-use std::thread::JoinHandle;
+use std::thread::{self, JoinHandle};
+
+pub type SocketJoinResult = Vec<Result<Result<(), TracerouteError>, Box<dyn Any + Send>>>;
 
 /// Creates network sockets to handle egress and ingress packets
 pub struct Sockets {
@@ -97,23 +99,23 @@ impl Sockets {
             (Err(err), Err(_)) => Err(err)?,
         }
     }
-}
 
-impl Drop for Sockets {
-    /// Close the network loop and hand out the spawn handle
-    fn drop(&mut self) {
+    /// Close the network connection
+    ///
+    /// This must be run before drop to capture any panics that came from the socket threads.
+    /// This shouldn't happen but in the case it does there is a way to handle it from within
+    /// the application logic and not here.
+    pub fn close(&mut self) -> SocketJoinResult {
         // Tell network loop to stop
         self.runnable.store(false, Ordering::SeqCst);
 
-        // Take the handles and cancel them. The Option<T> is needed so we can pull the handles out
-        // here. This is needed as we are borrowing self.
-        // It shouldn't be possible for the take to return None
-        if let Some(handle) = self.receive_handle.take() {
-            handle.join().unwrap();
-        }
-
-        if let Some(handle) = self.send_handle.take() {
-            handle.join().unwrap();
-        }
+        [&mut self.send_handle, &mut self.receive_handle]
+            .iter_mut()
+            .filter(|option| option.is_some()) // Only give us threads
+            // Take the value leaving None behind
+            // Unwrap the value as we know it is Some because we filtered above
+            // join the thread
+            .map(|option| option.take().unwrap().join())
+            .collect()
     }
 }
