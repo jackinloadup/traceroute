@@ -1,5 +1,5 @@
+use crate::packet::{PacketBuilder, PacketBuilderTrait};
 use crate::trace::{TraceActivity, TraceOptions, TraceResult};
-use crate::utils::packet_builder::{PacketBuilder, PacketBuilderTrait};
 use crate::utils::Protocol;
 use crate::TracerouteError;
 use crate::{ProbeBundle, ProbeRequest};

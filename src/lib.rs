@@ -31,6 +31,7 @@ extern crate pnet;
 
 mod edge;
 mod node;
+mod packet;
 mod probe;
 mod sockets;
 mod trace;
