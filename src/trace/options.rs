@@ -22,6 +22,22 @@ impl TraceOptions {
     pub fn get_masked(&self) -> Vec<u8> {
         self.mask.to_owned().unwrap_or_default()
     }
+
+    // Create a list of all distances we are trying to probe
+    pub fn get_ttl_range(&self) -> Vec<u8> {
+        let min_ttl = self.min_ttl;
+        let max_ttl = self.max_ttl;
+
+        match &self.mask {
+            // Mask out any distances we want to ignore
+            Some(vec) => (min_ttl..=max_ttl)
+                .into_iter()
+                .filter(|ttl| !vec.contains(ttl))
+                .collect(),
+            // No need to mask
+            None => (min_ttl..=max_ttl).into_iter().collect(),
+        }
+    }
 }
 
 impl Default for TraceOptions {

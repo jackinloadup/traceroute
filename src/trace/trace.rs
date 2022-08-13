@@ -77,24 +77,11 @@ impl Trace {
         destination: Ipv4Addr,
     ) -> Result<usize, TracerouteError> {
         let TraceOptions {
-            min_ttl,
-            max_ttl,
-            mask,
-            src_port,
-            dst_port,
-            ..
+            src_port, dst_port, ..
         } = options;
 
-        // Make a list of all distances we are trying to probe
-        let range: Vec<u8> = match mask {
-            // Mask out any distances we want to ignore
-            Some(vec) => (min_ttl..=max_ttl)
-                .into_iter()
-                .filter(|ttl| !vec.contains(ttl))
-                .collect(),
-            // No need to mask
-            None => (min_ttl..=max_ttl).into_iter().collect(),
-        };
+        // Get a list of all distances we are trying to probe
+        let range = options.get_ttl_range();
 
         let bundles: Vec<ProbeBundle<Ipv4Packet<'_>>> = range
             .iter()
