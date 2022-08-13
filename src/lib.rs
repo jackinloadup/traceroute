@@ -40,7 +40,7 @@ extern crate petgraph;
 extern crate pnet;
 
 mod edge;
-mod node;
+//mod node;
 mod packet;
 mod probe;
 mod sockets;
@@ -50,7 +50,7 @@ mod utils;
 
 pub use self::traceroute::{Traceroute, TracerouteError};
 pub use edge::Edge;
-pub use node::Node;
+//pub use node::Node;
 pub use probe::{Probe, ProbeBundle, ProbeRequest, ProbeResponse, ProbeSent};
 pub use sockets::SocketJoinResult;
 pub use trace::{Trace, TraceActivity, TraceOptions, TraceResponse, TraceResult};

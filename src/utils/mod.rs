@@ -1,7 +1,7 @@
-pub mod hop;
+//mod hop;
 mod protocol;
 
-pub use hop::Hop;
+//pub use hop::Hop;
 pub use protocol::Protocol;
 
 use crate::TracerouteError;
