@@ -1,8 +1,6 @@
 //mod hop;
-mod protocol;
 
 //pub use hop::Hop;
-pub use protocol::Protocol;
 
 use crate::probe::{Checksum, TcpId};
 use crate::TracerouteError;
@@ -85,6 +83,9 @@ fn unpack_icmp_payload(payload: &[u8]) -> Result<(u16, u16), TracerouteError> {
 
     let checksum = match packet.get_next_level_protocol() {
         IpNextHeaderProtocols::Udp => UdpPacket::new(packet.payload())
+            .ok_or(TracerouteError::MalformedPacket)?
+            .get_checksum(),
+        IpNextHeaderProtocols::Icmp => IcmpPacket::new(packet.payload())
             .ok_or(TracerouteError::MalformedPacket)?
             .get_checksum(),
         _ => {

@@ -1,4 +1,4 @@
-use crate::utils::Protocol;
+use crate::protocol::Protocol;
 use pnet::packet::icmp::IcmpType;
 use std::error::Error;
 use std::fmt;

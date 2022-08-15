@@ -1,6 +1,6 @@
 use crate::packet::{PacketBuilder, PacketBuilderTrait};
+use crate::protocol::{self, Protocol};
 use crate::trace::{TraceActivity, TraceOptions, TraceResult};
-use crate::utils::Protocol;
 use crate::TracerouteError;
 use crate::{ProbeBundle, ProbeRequest};
 
@@ -20,9 +20,8 @@ use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 #[derive(Debug)]
 pub struct Trace {
     source: IpAddr,
-    source_port: u16,
     destination: IpAddr,
-    destination_port: u16,
+    options: TraceOptions,
     probes_sent: usize,
     activity_receiver: Receiver<TraceResult>,
 }
@@ -30,9 +29,8 @@ pub struct Trace {
 impl PartialEq for Trace {
     fn eq(&self, other: &Self) -> bool {
         self.source == other.source
-            && self.source_port == other.source_port
             && self.destination == other.destination
-            && self.destination_port == other.destination_port
+            && self.options == other.options
     }
 }
 impl Eq for Trace {}
@@ -44,12 +42,10 @@ impl Trace {
         destination: IpAddr,
         packet_sender: Sender<ProbeRequest<'_>>,
     ) -> Result<Self, TracerouteError> {
-        let source_port = options.src_port;
-        let destination_port = options.dst_port;
         let (activity_sender, activity_receiver) = channel();
         let probes_sent = match (source, destination) {
             (IpAddr::V4(source), IpAddr::V4(destination)) => Self::ipv4_probe_request(
-                options,
+                options.clone(),
                 packet_sender,
                 activity_sender,
                 source,
@@ -61,9 +57,8 @@ impl Trace {
 
         Ok(Self {
             source,
-            source_port,
             destination,
-            destination_port,
+            options,
             probes_sent,
             activity_receiver,
         })
@@ -76,9 +71,7 @@ impl Trace {
         source: Ipv4Addr,
         destination: Ipv4Addr,
     ) -> Result<usize, TracerouteError> {
-        let TraceOptions {
-            src_port, dst_port, ..
-        } = options;
+        let TraceOptions { protocol, .. } = options;
 
         // Get a list of all distances we are trying to probe
         let range = options.get_ttl_range();
@@ -93,9 +86,7 @@ impl Trace {
         // Build packets and place them into probe bundles
         let bundles: Vec<ProbeBundle<Ipv4Packet<'_>>> = range
             .iter()
-            .map(|ttl| {
-                PacketBuilder::build(Protocol::UDP, source, src_port, destination, dst_port, *ttl)
-            })
+            .map(|ttl| PacketBuilder::build(protocol, source, destination, *ttl))
             .collect::<Result<_, TracerouteError>>()?;
 
         // Record how many probes we sent before we loose bundles
@@ -130,10 +121,11 @@ impl Hash for Trace {
         // ecn
         0u8.hash(state);
 
+        // Port data may not be taken into account for flows depending on the network device vendor
+        // and device configuration
         self.source.hash(state);
-        self.source_port.hash(state);
         self.destination.hash(state);
-        self.destination_port.hash(state);
+        self.options.protocol.hash(state);
         // min/max ttl and mask could be included here but I'm not sure that makes sense
     }
 }

@@ -1,8 +1,9 @@
 use crate::packet::{PacketBuilder, PacketBuilderTrait};
 use crate::probe::{Probe, ProbeBundle};
-use crate::utils::Protocol;
+use crate::protocol::{Protocol, UdpParams};
 use crate::TracerouteError;
 
+use pnet::packet::icmp::{self, IcmpCode, IcmpTypes, MutableIcmpPacket};
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::{self, Ipv4Packet, MutableIpv4Packet};
 use pnet::packet::udp::{self, MutableUdpPacket};
@@ -20,12 +21,16 @@ impl PacketBuilderTrait<Ipv4Addr, Ipv4Packet<'_>> for PacketBuilder {
     fn build(
         protocol: Protocol,
         source: Ipv4Addr,
-        source_port: u16,
         dest: Ipv4Addr,
-        dest_port: u16,
         ttl: u8,
     ) -> Result<ProbeBundle<Ipv4Packet<'static>>, TracerouteError> {
-        // create buffer for packet to fill into
+        // Validate if protocol is supported
+        let _ = match protocol {
+            Protocol::ICMP | Protocol::UDP(_) => (),
+            protocol => Err(TracerouteError::UnimplimentedProtocol(protocol))?,
+        };
+
+        // Create buffer for packet to fill into
         let buf = vec![0u8; IPV4_BUFFER_SIZE];
         let mut ip_header =
             MutableIpv4Packet::owned(buf).ok_or(TracerouteError::MalformedPacket)?;
@@ -36,11 +41,22 @@ impl PacketBuilderTrait<Ipv4Addr, Ipv4Packet<'_>> for PacketBuilder {
         // Return is only for errors
         let _ = set_ip_header_values(&mut ip_header, ttl, protocol, source, dest, ip_id)?;
 
-        let flowhash = flowhash(&ip_header, dest_port, source_port, source, dest);
-
-        let checksum = match protocol {
-            Protocol::UDP => {
-                build_udp_packet(&source, &mut ip_header, &dest, dest_port, source_port)?
+        let (flowhash, checksum) = match protocol {
+            Protocol::UDP(params) => {
+                let flowhash = flowhash(
+                    &ip_header,
+                    source,
+                    dest,
+                    Some(params.source_port),
+                    Some(params.destination_port),
+                );
+                let checksum = build_udp_packet(&mut ip_header, &source, &dest, params)?;
+                (flowhash, checksum)
+            }
+            Protocol::ICMP => {
+                let flowhash = flowhash(&ip_header, source, dest, None, None);
+                let checksum = build_icmp_packet(&mut ip_header)?;
+                (flowhash, checksum)
             }
             protocol => Err(TracerouteError::UnimplimentedProtocol(protocol))?,
         };
@@ -66,10 +82,7 @@ fn set_ip_header_values(
     ip_header.set_ecn(0);
     ip_header.set_total_length(52);
     ip_header.set_ttl(ttl);
-    match protocol {
-        Protocol::UDP => ip_header.set_next_level_protocol(IpNextHeaderProtocols::Udp),
-        protocol => return Err(TracerouteError::UnimplimentedProtocol(protocol)),
-    }
+    ip_header.set_next_level_protocol(protocol.into());
     ip_header.set_source(source);
     ip_header.set_destination(dest);
     ip_header.set_identification(ip_id);
@@ -79,16 +92,22 @@ fn set_ip_header_values(
 
 fn flowhash(
     ip_header: &MutableIpv4Packet,
-    dest_port: u16,
-    source_port: u16,
     source: Ipv4Addr,
     dest: Ipv4Addr,
+    dest_port: Option<u16>,
+    source_port: Option<u16>,
 ) -> u16 {
     let mut hasher = DefaultHasher::new();
     hasher.write_u8(ip_header.get_dscp());
     hasher.write_u8(ip_header.get_ecn());
-    hasher.write_u16(dest_port);
-    hasher.write_u16(source_port);
+
+    if let Some(source_port) = source_port {
+        hasher.write_u16(source_port);
+    }
+    if let Some(dest_port) = dest_port {
+        hasher.write_u16(dest_port);
+    }
+
     source.hash(&mut hasher);
     dest.hash(&mut hasher);
 
@@ -99,24 +118,36 @@ fn flowhash(
 }
 
 fn build_udp_packet(
-    source: &Ipv4Addr,
     ip_header: &mut MutableIpv4Packet,
+    source: &Ipv4Addr,
     destination_ip: &Ipv4Addr,
-    port: u16,
-    source_port: u16,
+    params: UdpParams,
 ) -> Result<u16, TracerouteError> {
     let mut udp_header =
         MutableUdpPacket::new(ip_header.payload_mut()).ok_or(TracerouteError::MalformedPacket)?;
 
-    udp_header.set_source(source_port);
-    udp_header.set_destination(port);
-    // Question: Does calulating the packet sizes here a performance impact? or is it all inlined?
+    udp_header.set_source(params.source_port);
+    udp_header.set_destination(params.destination_port);
     // 8 bytes for the udp header and 24 for the payload
     udp_header.set_length(32_u16);
     udp_header.set_payload(&[0_u8; 24]);
 
     let checksum = udp::ipv4_checksum(&udp_header.to_immutable(), source, destination_ip);
     udp_header.set_checksum(checksum);
+
+    Ok(checksum)
+}
+
+fn build_icmp_packet(ip_header: &mut MutableIpv4Packet) -> Result<u16, TracerouteError> {
+    let mut icmp_header =
+        MutableIcmpPacket::new(ip_header.payload_mut()).ok_or(TracerouteError::MalformedPacket)?;
+
+    icmp_header.set_icmp_type(IcmpTypes::EchoRequest);
+    icmp_header.set_icmp_code(IcmpCode::new(0));
+    icmp_header.set_payload(&[0_u8; 24]);
+
+    let checksum = icmp::checksum(&icmp_header.to_immutable());
+    icmp_header.set_checksum(checksum);
 
     Ok(checksum)
 }
