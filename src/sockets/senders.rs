@@ -98,9 +98,7 @@ impl SocketSenders {
                     for bundle in bundles {
                         let ProbeBundle { probe, packet } = bundle;
 
-                        probe_sender
-                            .send((probe.id, activity_sender.clone()))
-                            .map_err(|_| TracerouteError::ChannelUnexpectedlyClosed)?;
+                        probe_sender.send((probe.id, activity_sender.clone()))?;
 
                         let dest = packet.get_destination();
 

@@ -3,6 +3,7 @@ use pnet::packet::icmp::IcmpType;
 use std::error::Error;
 use std::fmt;
 use std::io::{self, ErrorKind};
+use std::sync::mpsc;
 
 /// Wrapper for all errors that can occur in this library
 #[derive(Debug)]
@@ -62,5 +63,11 @@ impl fmt::Display for TracerouteError {
 impl From<io::Error> for TracerouteError {
     fn from(err: io::Error) -> Self {
         Self::Io(err)
+    }
+}
+
+impl<T> From<mpsc::SendError<T>> for TracerouteError {
+    fn from(_err: mpsc::SendError<T>) -> Self {
+        Self::ChannelUnexpectedlyClosed
     }
 }

@@ -78,9 +78,7 @@ impl Trace {
 
         // Send activity of masked ttls
         for ttl in options.get_masked() {
-            let _ = activity_sender
-                .send(Ok(TraceActivity::Masked(ttl)))
-                .unwrap();
+            let _ = activity_sender.send(Ok(TraceActivity::Masked(ttl)))?;
         }
 
         // Build packets and place them into probe bundles
@@ -96,7 +94,7 @@ impl Trace {
             bundles,
             activity_sender,
         };
-        packet_sender.send(request).unwrap();
+        packet_sender.send(request)?;
         Ok(probes_sent)
     }
 
