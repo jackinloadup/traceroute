@@ -1,7 +1,7 @@
 use crate::protocol::Protocol;
 
 /// Contains configuration parameters
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TraceOptions {
     /// The minimum TTL to probe
     /// 0 is invalid as it would drop before leaving the originating machine
@@ -13,7 +13,7 @@ pub struct TraceOptions {
     /// The probe response timeout in milliseconds
     pub timeout: u16,
     /// TTLs to skip probing
-    pub mask: Option<Vec<u8>>,
+    pub mask: [bool; 32],
     /// Protocol to use for tracing
     pub protocol: Protocol,
 }
@@ -21,19 +21,38 @@ pub struct TraceOptions {
 impl TraceOptions {
     /// Returns empty Vec if no mask
     pub fn get_masked(&self) -> Vec<u8> {
-        self.mask.to_owned().unwrap_or_default()
+        self.mask
+            .iter()
+            .enumerate()
+            .filter_map(|(i, ttl)| if *ttl { Some((i + 1) as u8) } else { None })
+            .collect()
     }
 
     // Create a list of all distances we are trying to probe
     pub fn get_ttl_range(&self) -> Vec<u8> {
-        let range = (self.min_ttl..=self.max_ttl).into_iter();
+        //let min_ttl: usize = self.min_ttl.into();
+        //let max_ttl: usize = self.max_ttl.into();
+        let min_ttl = self.min_ttl;
+        let max_ttl = self.max_ttl;
 
-        match &self.mask {
-            // Mask out any distances we want to ignore
-            Some(vec) => range.filter(|ttl| !vec.contains(ttl)).collect(),
-            // No need to mask
-            None => range.collect(),
-        }
+        // would be great if we got this from self.mask
+        let len: u8 = 32;
+
+        (min_ttl..=max_ttl)
+            .into_iter()
+            .filter(|ttl| {
+                // Any ttls after the mask length are allowed regardless
+                if ttl >= &len {
+                    !self.mask[*ttl as usize]
+                } else {
+                    true
+                }
+            })
+            .collect()
+    }
+
+    pub fn mask(&mut self, ttl: u8) {
+        self.mask[ttl as usize] = true;
     }
 }
 
@@ -43,8 +62,8 @@ impl Default for TraceOptions {
             min_ttl: 1,
             max_ttl: 32,
             delay: 10,
-            mask: None,
             timeout: 300,
+            mask: [false; 32],
             protocol: Protocol::default(),
         }
     }
