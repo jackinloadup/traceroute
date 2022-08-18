@@ -1,6 +1,7 @@
-use crate::sockets::{SocketReceiver, SocketReceivers, SocketSender, SocketSenders};
+use super::{SocketReceiver, SocketReceivers, SocketSender, SocketSenders};
+use crate::trace::TraceRequest;
 use crate::utils::get_default_source_ip;
-use crate::{ProbeRequest, TracerouteError};
+use crate::TracerouteError;
 use core::sync::atomic::{AtomicBool, Ordering};
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::transport::transport_channel;
@@ -19,7 +20,7 @@ pub struct Sockets {
     send_handle: Option<JoinHandle<Result<(), TracerouteError>>>,
     receive_handle: Option<JoinHandle<Result<(), TracerouteError>>>,
     runnable: Arc<AtomicBool>,
-    packet_sender: Sender<ProbeRequest<'static>>,
+    packet_sender: Sender<TraceRequest<'static>>,
 }
 
 impl Sockets {
@@ -56,7 +57,7 @@ impl Sockets {
         &self.addresses
     }
 
-    pub fn packet_sender(&self) -> Sender<ProbeRequest<'static>> {
+    pub fn packet_sender(&self) -> Sender<TraceRequest<'static>> {
         self.packet_sender.clone()
     }
 

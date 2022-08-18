@@ -1,8 +1,8 @@
-//mod hop;
+mod hop;
 
-//pub use hop::Hop;
+pub use hop::Hop;
 
-use crate::probe::{Checksum, TcpId};
+use crate::prelude::{Checksum, TcpId};
 use crate::TracerouteError;
 
 use pnet::datalink::{MacAddr, NetworkInterface};

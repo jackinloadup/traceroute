@@ -3,14 +3,15 @@ use crate::protocol::Protocol;
 /// Contains configuration parameters
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TraceOptions {
-    /// Number of paths to probe
-    pub npaths: u8,
     /// The minimum TTL to probe
+    /// 0 is invalid as it would drop before leaving the originating machine
     pub min_ttl: u8,
     /// The maximum TTL to probe. Must be greater than the minimum TTL
     pub max_ttl: u8,
     /// The inter-packet delay in milliseconds
     pub delay: u16,
+    /// The probe response timeout in milliseconds
+    pub timeout: u16,
     /// TTLs to skip probing
     pub mask: Option<Vec<u8>>,
     /// Protocol to use for tracing
@@ -39,11 +40,11 @@ impl TraceOptions {
 impl Default for TraceOptions {
     fn default() -> Self {
         Self {
-            npaths: 1,
-            min_ttl: 0,
-            max_ttl: 30,
+            min_ttl: 1,
+            max_ttl: 32,
             delay: 10,
             mask: None,
+            timeout: 300,
             protocol: Protocol::default(),
         }
     }

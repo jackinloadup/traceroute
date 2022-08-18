@@ -1,8 +1,8 @@
-use crate::probe::ProbeSent;
 use std::cmp::Ordering;
 use std::time::Instant;
 
-use super::{Checksum, Flowhash, TcpId, TTL};
+use crate::prelude::{Checksum, Flowhash, TcpId, TTL};
+use crate::probe::ProbeSent;
 
 /// Information to correlate a sent packet to it's response
 #[derive(Debug)]

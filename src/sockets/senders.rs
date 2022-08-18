@@ -1,5 +1,7 @@
-use crate::probe::TcpId;
-use crate::{ProbeBundle, ProbeRequest, TraceActivity, TraceResult, TracerouteError};
+use crate::prelude::*;
+use crate::probe::{ProbeBundle, ProbeSent};
+use crate::trace::{TraceRequest, TraceSent};
+use crate::TracerouteError;
 use core::sync::atomic::{AtomicBool, Ordering};
 use log::*;
 use pnet::packet::ipv4::Ipv4Packet;
@@ -38,41 +40,29 @@ pub enum SocketSenders {
 impl SocketSenders {
     pub fn addresses(&self) -> Vec<IpAddr> {
         match *self {
-            Self::V4(ref socket) => socket
-                .addresses
-                .clone()
-                .iter()
-                .map(|ip| IpAddr::V4(*ip))
-                .collect(),
+            Self::V4(ref socket) => socket.addresses.iter().map(|ip| IpAddr::V4(*ip)).collect(),
             Self::Both { ref v4, ref v6 } => {
                 let mut v4 = v4
                     .addresses
-                    .clone()
                     .iter()
                     .map(|ip| IpAddr::V4(*ip))
                     .collect::<Vec<IpAddr>>();
                 let mut v6 = v6
                     .addresses
-                    .clone()
                     .iter()
                     .map(|ip| IpAddr::V6(*ip))
                     .collect::<Vec<IpAddr>>();
                 v4.append(&mut v6);
                 v4
             }
-            Self::V6(ref socket) => socket
-                .addresses
-                .clone()
-                .iter()
-                .map(|ip| IpAddr::V6(*ip))
-                .collect(),
+            Self::V6(ref socket) => socket.addresses.iter().map(|ip| IpAddr::V6(*ip)).collect(),
         }
     }
 
     pub fn send(
         &mut self,
-        packet_receiver: Receiver<ProbeRequest<'_>>,
-        probe_sender: Sender<(TcpId, Sender<TraceResult>)>,
+        packet_receiver: Receiver<TraceRequest<'_>>,
+        probe_sender: Sender<TraceSent>,
         runnable: Arc<AtomicBool>,
     ) -> Result<(), TracerouteError> {
         while runnable.load(Ordering::SeqCst) {
@@ -87,32 +77,47 @@ impl SocketSenders {
             };
 
             match probe_request {
-                ProbeRequest::V4 {
+                TraceRequest::V4 {
                     bundles,
+                    timeout,
                     activity_sender,
                 } => {
                     debug!(
                         "Sender has received ProbeRequest with {} packets",
                         bundles.len()
                     );
-                    for bundle in bundles {
-                        let ProbeBundle { probe, packet } = bundle;
+                    let result: Result<Vec<ProbeSent>, TracerouteError> = bundles
+                        .into_iter()
+                        .map(|bundle| {
+                            let ProbeBundle { probe, packet } = bundle;
 
-                        probe_sender.send((probe.id, activity_sender.clone()))?;
+                            let dest = packet.get_destination();
 
-                        let dest = packet.get_destination();
+                            // thread::sleep(packet_delay);
 
-                        thread::sleep(packet_delay);
+                            self.send_packet(packet, dest)?;
+                            Ok(probe.sent())
+                        })
+                        .collect();
 
-                        self.send_packet(packet, dest)?;
+                    debug!("finished sending packet bundle");
 
-                        let activity = TraceActivity::Sent(probe.sent());
-                        // If sender is closed there isn't anything we can do about it here
-                        let _ = activity_sender.send(Ok(activity));
+                    match result {
+                        Ok(probes) => {
+                            debug!("probes to send {}", probes.len());
+                            let sent = TraceSent {
+                                probes,
+                                timeout,
+                                activity_sender,
+                            };
+                            probe_sender.send(sent)?;
+                        }
+                        Err(_err) => todo!("Recived an error"),
                     }
                 }
-                ProbeRequest::V6 {
+                TraceRequest::V6 {
                     bundles: _,
+                    timeout: _,
                     activity_sender: _,
                 } => todo!(),
             }

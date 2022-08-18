@@ -1,78 +1,38 @@
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-use std::time::Instant;
+use std::net::IpAddr;
+use std::time::{Duration, Instant};
 
-use super::{Checksum, TcpId};
+use super::ProbeSent;
+
+use crate::prelude::TTL;
 
 /// Information received from the returned [`ProbeSent`](crate::probe::ProbeSent)
+///
+/// The response doesn't currently take into account the checksum of the sent probe vs the
+/// response. Also there is no attempt to inspect the payload of the probe sent. There is no
+/// current payload being sent but it may be useful to take advantage of the payload to investigate
+/// when routers are spliting packets or other funky stuff.
+///
+/// Upon creation the following values are being discarded for reference
+/// TcpId
+/// Checksum (sent and received)
 #[derive(Debug)]
-pub enum ProbeResponse {
-    /// IPv4 Response
-    V4 {
-        /// Ip of the server which responded
-        source: Ipv4Addr,
-        /// TCP identification
-        id: TcpId,
-        /// Checksum of the embdedded udp packet
-        checksum: Checksum,
-        /// Time when the probe returned
-        instant: Instant,
-    },
-    /// IPv6 Response
-    V6 {
-        /// Ip of the server which responded
-        source: Ipv6Addr,
-        /// Id of the ip packet
-        id: TcpId,
-        /// Checksum of the embdedded udp packet
-        checksum: Checksum,
-        /// Time when the probe returned
-        instant: Instant,
-    },
+pub struct ProbeResponse {
+    /// How many hops away the `destination` is
+    pub ttl: TTL,
+    /// Ip of the machine which responded
+    pub destination: IpAddr,
+    /// Time when the probe returned
+    pub ping: Duration,
 }
 
 impl ProbeResponse {
-    pub fn new(source: IpAddr, id: TcpId, checksum: Checksum, instant: Instant) -> Self {
-        match source {
-            IpAddr::V4(source) => Self::V4 {
-                source,
-                id,
-                checksum,
-                instant,
-            },
-            IpAddr::V6(source) => Self::V6 {
-                source,
-                id,
-                checksum,
-                instant,
-            },
-        }
-    }
+    pub fn new(sent: ProbeSent, destination: IpAddr, moment_received: Instant) -> Self {
+        let ping = moment_received.duration_since(sent.instant);
 
-    pub fn get_source(&self) -> IpAddr {
-        match self {
-            Self::V4 { source, .. } => IpAddr::V4(*source),
-            Self::V6 { source, .. } => IpAddr::V6(*source),
-        }
-    }
-
-    pub fn get_id(&self) -> &TcpId {
-        match self {
-            Self::V4 { id, .. } => id,
-            Self::V6 { id, .. } => id,
-        }
-    }
-
-    pub fn get_checksum(&self) -> &Checksum {
-        match self {
-            Self::V4 { checksum, .. } => checksum,
-            Self::V6 { checksum, .. } => checksum,
-        }
-    }
-
-    pub fn get_instant(&self) -> &Instant {
-        match self {
-            Self::V4 { instant, .. } => instant,
-            Self::V6 { instant, .. } => instant,
+        Self {
+            ttl: sent.ttl,
+            destination,
+            ping,
         }
     }
 }

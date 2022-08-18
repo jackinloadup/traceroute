@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 mod error;
 mod traceroute;
 
