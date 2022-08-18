@@ -21,6 +21,9 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::time::Duration;
 
+// Thoughts
+// track traces in traceroute with a Hashmap<Flowhash, mpsc::Sender<TraceActivity>>
+
 /// Perform trace from a source to destination
 #[derive(Debug)]
 pub struct Trace {
@@ -142,6 +145,25 @@ impl Trace {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish() as u16
+    }
+
+    /// Calculate the flowhash of a potential new trace
+    ///
+    /// This is to check if a flow is already in a `HashMap` or `HashSet` or similar
+    pub fn pre_build_flowhash(source: &IpAddr, destination: &IpAddr, protocol: &Protocol) -> u16 {
+        let mut state = DefaultHasher::new();
+        // dscp
+        0u8.hash(&mut state);
+        // ecn
+        0u8.hash(&mut state);
+
+        // Port data may not be taken into account for flows depending on the network device vendor
+        // and device configuration
+        source.hash(&mut state);
+        destination.hash(&mut state);
+        protocol.hash(&mut state);
+
+        state.finish() as u16
     }
 }
 
