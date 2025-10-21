@@ -87,6 +87,11 @@ async fn app(options: Options) -> Result<(), TracerouteError> {
             IpAddr::V4(_) => traces.push(agent.trace(source.clone(), target, config.clone())?),
             IpAddr::V6(ip) => warn!("Skipped IPv6 target {}", ip),
         }
+
+        // break after the first trace if we are not performing a trace
+        if !dot {
+            break;
+        }
     }
 
 
