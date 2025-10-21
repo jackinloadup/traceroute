@@ -1,6 +1,10 @@
 # Traceroute
 Network diagnostic tool to capture route and transit delay of packets.
 
+My motivation for building this was to explore oddities in internet routing.
+Specifically providers which send traffic through multiple routes for the same
+destination, unoptimal routing, and bad performance routers along the path.
+
 # Usage
 
 For Nix users
