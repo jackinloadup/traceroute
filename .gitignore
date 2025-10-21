@@ -1,1 +1,5 @@
+# ignore build artifacts
 /target
+
+
+.pre-commit-config.yaml
