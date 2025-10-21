@@ -8,7 +8,7 @@
         config.pre-commit.devShell # See ./nix/modules/pre-commit.nix
       ];
       packages = with pkgs; [
-        just
+        xdot
         nixd # Nix language server
         bacon
         #config.process-compose.cargo-doc-live.outputs.package
