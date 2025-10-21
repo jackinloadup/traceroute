@@ -13,8 +13,6 @@ pub struct TraceParam<A> {
     src_port: u16,
     /// Base destination port to send packets to
     dst_port: u16,
-    /// Number of paths to probe
-    npaths: u8,
     /// The minimum TTL to probe
     min_ttl: u8,
     /// The maximum TTL to probe. Must be greater than the minimum TTL

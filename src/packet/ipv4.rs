@@ -1,17 +1,16 @@
+use crate::TracerouteError;
 use crate::packet::{PacketBuilder, PacketBuilderTrait};
 use crate::probe::{Probe, ProbeBundle};
 use crate::protocol::{Protocol, UdpParams};
-use crate::TracerouteError;
 
+use pnet::packet::MutablePacket;
 use pnet::packet::icmp::{self, IcmpCode, IcmpTypes, MutableIcmpPacket};
-use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::{self, Ipv4Packet, MutableIpv4Packet};
 use pnet::packet::udp::{self, MutableUdpPacket};
-use pnet::packet::MutablePacket;
-use rand::Rng;
+use rand::prelude::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::net::Ipv4Addr;
+use std::net::{IpAddr,Ipv4Addr};
 
 // 24 is the size of the payload we attached to the udp packet;
 const IPV4_BUFFER_SIZE: usize =
@@ -35,8 +34,11 @@ impl PacketBuilderTrait<Ipv4Addr, Ipv4Packet<'_>> for PacketBuilder {
         let mut ip_header =
             MutableIpv4Packet::owned(buf).ok_or(TracerouteError::MalformedPacket)?;
 
+        // get source of randomness
+        let mut rng = rand::rng();
+
         // Generate random IPv4 packet id
-        let ip_id = rand::thread_rng().gen();
+        let ip_id = rng.random::<u16>();
 
         // Return is only for errors
         let _ = set_ip_header_values(&mut ip_header, ttl, protocol, source, dest, ip_id)?;
@@ -53,16 +55,16 @@ impl PacketBuilderTrait<Ipv4Addr, Ipv4Packet<'_>> for PacketBuilder {
                 let checksum = build_udp_packet(&mut ip_header, &source, &dest, params)?;
                 (flowhash, checksum)
             }
-            Protocol::ICMP => {
-                let flowhash = flowhash(&ip_header, source, dest, None, None);
-                let checksum = build_icmp_packet(&mut ip_header)?;
-                (flowhash, checksum)
-            }
+            //Protocol::ICMP => {
+            //    let flowhash = flowhash(&ip_header, source, dest, None, None);
+            //    let checksum = build_icmp_packet(&mut ip_header)?;
+            //    (flowhash, checksum)
+            //}
             protocol => Err(TracerouteError::UnimplimentedProtocol(protocol))?,
         };
 
         let packet = ip_header.consume_to_immutable();
-        let probe = Probe::new(ttl, ip_id, checksum, flowhash);
+        let probe = Probe::new(IpAddr::V4(source), ttl, ip_id, checksum, flowhash);
 
         Ok(ProbeBundle { packet, probe })
     }
@@ -117,6 +119,7 @@ fn flowhash(
     flowhash
 }
 
+// Build UDP probe. Response is ICMP packet with UDP packet returned inside
 fn build_udp_packet(
     ip_header: &mut MutableIpv4Packet,
     source: &Ipv4Addr,

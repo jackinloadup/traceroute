@@ -1,6 +1,6 @@
+use crate::TracerouteError;
 use crate::probe::ProbeBundle;
 use crate::protocol::Protocol;
-use crate::TracerouteError;
 
 pub trait PacketBuilderTrait<A, P> {
     fn build(

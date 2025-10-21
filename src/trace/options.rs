@@ -12,10 +12,12 @@ pub struct TraceOptions {
     pub delay: u16,
     /// The probe response timeout in milliseconds
     pub timeout: u16,
-    /// TTLs to skip probing
+    /// TTLs to skip probing. ex: skip closest known hosts
     pub mask: [bool; 32],
     /// Protocol to use for tracing
     pub protocol: Protocol,
+    /// Output in dot format
+    pub dot: bool,
 }
 
 impl TraceOptions {
@@ -30,20 +32,17 @@ impl TraceOptions {
 
     // Create a list of all distances we are trying to probe
     pub fn get_ttl_range(&self) -> Vec<u8> {
-        //let min_ttl: usize = self.min_ttl.into();
-        //let max_ttl: usize = self.max_ttl.into();
         let min_ttl = self.min_ttl;
         let max_ttl = self.max_ttl;
 
-        // would be great if we got this from self.mask
-        let len: u8 = 32;
+        let len: u8 = self.mask.len() as u8;
 
         (min_ttl..=max_ttl)
             .into_iter()
             .filter(|ttl| {
                 // Any ttls after the mask length are allowed regardless
                 if ttl >= &len {
-                    !self.mask[*ttl as usize]
+                    !self.mask[(*ttl as usize) - 1]
                 } else {
                     true
                 }
@@ -65,6 +64,7 @@ impl Default for TraceOptions {
             timeout: 300,
             mask: [false; 32],
             protocol: Protocol::default(),
+            dot: false,
         }
     }
 }

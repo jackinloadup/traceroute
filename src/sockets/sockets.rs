@@ -1,15 +1,15 @@
 use super::{SocketReceiver, SocketReceivers, SocketSender, SocketSenders};
+use crate::TracerouteError;
 use crate::trace::TraceRequest;
 use crate::utils::get_default_source_ip;
-use crate::TracerouteError;
 use core::sync::atomic::{AtomicBool, Ordering};
 use pnet::packet::ip::IpNextHeaderProtocols;
-use pnet::transport::transport_channel;
 use pnet::transport::TransportChannelType::Layer3;
+use pnet::transport::transport_channel;
 use std::any::Any;
 use std::net::{IpAddr, Ipv6Addr};
-use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
+use std::sync::mpsc::{Sender, channel};
 use std::thread::{self, JoinHandle};
 
 pub type SocketJoinResult = Vec<Result<Result<(), TracerouteError>, Box<dyn Any + Send>>>;

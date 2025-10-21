@@ -2,17 +2,17 @@ mod hop;
 
 pub use hop::Hop;
 
-use crate::prelude::{Checksum, TcpId};
 use crate::TracerouteError;
+use crate::prelude::{Checksum, TcpId};
 
 use pnet::datalink::{MacAddr, NetworkInterface};
 use std::net::{IpAddr, Ipv4Addr};
 
+use pnet::packet::Packet;
 use pnet::packet::icmp::{IcmpPacket, IcmpTypes};
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::udp::UdpPacket;
-use pnet::packet::Packet;
 use std::io;
 
 //use std::collections::HashMap;
@@ -90,8 +90,8 @@ fn unpack_icmp_payload(payload: &[u8]) -> Result<(u16, u16), TracerouteError> {
             .get_checksum(),
         _ => {
             return Err(TracerouteError::UnmatchedPacket(
-                "incoming icmp payload is not a UDP packet",
-            ))
+                "incoming icmp payload is not a UDP or ICMP packet",
+            ));
         }
     };
     Ok((id, checksum))
@@ -124,7 +124,7 @@ pub fn handle_ipv4_packet(
         _ => {
             return Err(TracerouteError::UnmatchedPacket(
                 "pnet is sending us packets we didn't request",
-            ))
+            ));
         }
     };
     Ok((source, id, checksum))

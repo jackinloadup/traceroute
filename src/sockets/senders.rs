@@ -1,7 +1,7 @@
+use crate::TracerouteError;
 use crate::prelude::*;
 use crate::probe::{ProbeBundle, ProbeSent};
 use crate::trace::{TraceRequest, TraceSent};
-use crate::TracerouteError;
 use core::sync::atomic::{AtomicBool, Ordering};
 use log::*;
 use pnet::packet::ipv4::Ipv4Packet;
@@ -70,7 +70,7 @@ impl SocketSenders {
             let probe_request = match packet_receiver.try_recv() {
                 Ok(request) => request,
                 Err(TryRecvError::Empty) => {
-                    thread::sleep(Duration::from_millis(10));
+                    thread::sleep(packet_delay);
                     continue;
                 }
                 Err(TryRecvError::Disconnected) => break,
@@ -83,7 +83,7 @@ impl SocketSenders {
                     activity_sender,
                 } => {
                     debug!(
-                        "Sender has received ProbeRequest with {} packets",
+                        "Sender has received TraceRequest with {} packets",
                         bundles.len()
                     );
                     let result: Result<Vec<ProbeSent>, TracerouteError> = bundles

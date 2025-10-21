@@ -15,14 +15,16 @@ use crate::prelude::TTL;
 /// Upon creation the following values are being discarded for reference
 /// TcpId
 /// Checksum (sent and received)
-#[derive(Debug)]
+#[derive(Clone,Debug)]
 pub struct ProbeResponse {
     /// How many hops away the `destination` is
     pub ttl: TTL,
-    /// Ip of the machine which responded
+    /// IP of the machine which responded
     pub destination: IpAddr,
     /// Time when the probe returned
     pub ping: Duration,
+    /// Probe that was sent
+    pub sent: ProbeSent,
 }
 
 impl ProbeResponse {
@@ -33,6 +35,7 @@ impl ProbeResponse {
             ttl: sent.ttl,
             destination,
             ping,
+            sent,
         }
     }
 }

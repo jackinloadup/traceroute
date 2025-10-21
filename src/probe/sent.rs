@@ -1,13 +1,16 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::net::IpAddr;
 use std::time::Instant;
 
-use crate::prelude::{Checksum, Flowhash, TcpId, TTL};
+use crate::prelude::{Checksum, Flowhash, TTL, TcpId};
 
 /// Created by [`Probe`](crate::probe::Probe) when a packet is passed to the network to mark the [`Instant`] it was
 /// sent
-#[derive(Debug, Clone)]
+#[derive(Clone,Debug)]
 pub struct ProbeSent {
+    /// Source IP Address
+    pub source: IpAddr,
     /// TCP ttl value which will control how many hops until the packet is returned to sender
     pub ttl: TTL,
     /// TCP identification

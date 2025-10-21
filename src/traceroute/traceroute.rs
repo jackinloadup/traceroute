@@ -1,7 +1,6 @@
 use crate::sockets::{SocketJoinResult, Sockets};
 use crate::trace::{Trace, TraceOptions};
 use crate::traceroute::TracerouteError;
-use crate::Protocol;
 use log::*;
 use std::net::IpAddr;
 

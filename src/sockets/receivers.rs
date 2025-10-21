@@ -4,11 +4,11 @@ use crate::trace::{TraceResponse, TraceResult, TraceSent};
 use crate::utils::handle_ipv4_packet;
 use core::sync::atomic::{AtomicBool, Ordering};
 use log::*;
-use pnet::transport::{ipv4_packet_iter, TransportReceiver};
+use pnet::transport::{TransportReceiver, ipv4_packet_iter};
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 use std::time::Instant;
 
@@ -58,7 +58,7 @@ impl SocketReceivers {
             if let Self::V4(socket) = self {
                 let mut packet_iter = ipv4_packet_iter(&mut socket.rx);
                 loop {
-                    // Agressively handle new probes sent
+                    // Aggressively handle new probes sent
                     while let Ok(trace_sent) = probe_receiver.try_recv() {
                         let TraceSent {
                             probes: sent_probes,
@@ -76,6 +76,9 @@ impl SocketReceivers {
                         for sent in sent_probes {
                             // Was this packet seen before the TraceSent package got here
                             // IRL packets from immediate router could respond faster
+                            //
+                            // source from the unmatched packet is the would be a destination
+                            // from this machine perspective
                             if let Some((source, instant)) = unmatched_packets.remove(&sent.id) {
                                 let activity = TraceResponse::Received(ProbeResponse::new(
                                     sent, source, instant,
@@ -110,7 +113,7 @@ impl SocketReceivers {
                     //
                     let (source, id, _checksum) = match handle_ipv4_packet(packet) {
                         Ok(data) => data,
-                        Err(_err) => todo!("traceroute error relating to packet parsing"),
+                        Err(err) => todo!("traceroute error relating to packet parsing, {}", err),
                     };
 
                     // Match packet and return

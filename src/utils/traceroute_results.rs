@@ -111,7 +111,7 @@ impl TracerouteResults {
         //    if let Some(ttl) = target_ttl {
         //        if probe.ttl > ttl {
         //            break;
-        //        }
+        //        }v
         //    }
 
         //    println!("{:?}", probe);
@@ -205,7 +205,7 @@ impl fmt::Display for TracerouteResults {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Traceroute results from {} to {:?} resulting in {} nodes and {} edges",
+            "Traceroute resulting in {} nodes and {} edges",
             self.source,
             self.target,
             self.graph.node_count(),

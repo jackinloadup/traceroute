@@ -20,4 +20,3 @@ pub use crate::protocol::Protocol;
 pub use crate::sockets::SocketJoinResult;
 pub use crate::trace::{Trace, TraceOptions};
 pub use crate::traceroute::{Traceroute, TracerouteError};
-pub use crate::utils::Hop;

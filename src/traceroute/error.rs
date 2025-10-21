@@ -50,10 +50,10 @@ impl fmt::Display for TracerouteError {
             Self::NoIpv6 => write!(f, "ipv6 is not yet supported"),
             Self::UnimplimentedProtocol(proto) => {
                 write!(f, "{} probe is unimplimented", proto)
-            },
+            }
             Self::ICMPTypeUnexpected(_icmp_type) => {
                 write!(f, "ran into an unimplimented ICMP type")
-            },
+            }
             Self::ChannelUnexpectedlyClosed => write!(f, "channel unexptectedly closed"),
             Self::IpProtocolMismatch => write!(f, "attempted to use ipv4 with ipv6"),
         }

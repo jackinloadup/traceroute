@@ -1,30 +1,27 @@
 use super::{TraceOptions, TraceRequest, TraceResponse, TraceResult};
 
+use crate::TracerouteError;
 use crate::packet::{PacketBuilder, PacketBuilderTrait};
 use crate::prelude::*;
 use crate::probe::ProbeBundle;
-use crate::utils::Hop;
-use crate::TracerouteError;
 
 use async_std::{
     pin::Pin,
     stream::Stream,
     task::{Context, Poll},
 };
-use log::debug;
+use log::*;
 use pnet::packet::ipv4::Ipv4Packet;
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::iter::Iterator;
 use std::net::{IpAddr, Ipv4Addr};
-use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
+use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
 use std::time::Duration;
 
-// Thoughts
-// track traces in traceroute with a Hashmap<Flowhash, mpsc::Sender<TraceActivity>>
-
 /// Perform trace from a source to destination
+/// Acts as an iterator or stream by providing whole trace each time `next()` is called.
 #[derive(Debug)]
 pub struct Trace {
     source: IpAddr,
@@ -33,7 +30,8 @@ pub struct Trace {
     probes_sent: usize,
     packet_sender: Sender<TraceRequest<'static>>,
     activity_receiver: Receiver<TraceResult>,
-    queue: Vec<Option<Hop>>,
+    // Holds results for this `round` of the trace
+    queue: Vec<Option<TraceResponse>>,
     // each time we start a trace increment and use invocations with packet building to know which
     // packets were with which round of sending. Is this an issue?
     round: usize,
@@ -85,7 +83,7 @@ impl Trace {
     ) -> Result<usize, TracerouteError> {
         // Send activity of masked ttls
         for ttl in self.options.get_masked() {
-            self.insert_response(ttl, Hop::Masked);
+            self.insert_response(TraceResponse::Masked(ttl));
         }
 
         let Self {
@@ -120,22 +118,35 @@ impl Trace {
         self.probes_sent
     }
 
-    fn insert_response(&mut self, ttl: TTL, hop: Hop) {
+    // place response into queue
+    fn insert_response(&mut self, response: TraceResponse) {
+        let ttl = match response {
+          TraceResponse::Masked(ref ttl) => &ttl,
+          TraceResponse::TimedOut(ref sent) => &sent.ttl,
+          TraceResponse::Received(ref resp) => &resp.ttl,
+        }.clone();
+
         let index: usize = (ttl - 1).into();
+
         debug!("len {:?} index {:?}", self.queue.len(), index);
         let _ = match self.queue.get_mut(index) {
-            Some(option) => option.insert(hop),
+            Some(option) => option.insert(response),
             None => todo!("queue isn't big enough"),
         };
     }
 
-    fn collect_results(&mut self) -> Vec<Hop> {
-        let hops: Vec<Hop> = self
+    // pull results from the queue
+    fn collect_results(&mut self) -> Vec<TraceResponse> {
+        let hops: Vec<TraceResponse> = self
             .queue
             .iter_mut()
+            // Take the Response from the Option
             .map(|option| option.take())
+            // Remove all None
             .filter(|option| option.is_some())
+            // Pull the Response from the Option
             .map(|option| option.unwrap())
+            // Place all Responses into Vec
             .collect();
 
         hops
@@ -193,7 +204,7 @@ impl PartialEq for Trace {
 impl Eq for Trace {}
 
 impl Iterator for Trace {
-    type Item = Result<Vec<Hop>, TracerouteError>;
+    type Item = Result<Vec<TraceResponse>, TracerouteError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let Self {
@@ -250,12 +261,14 @@ impl Iterator for Trace {
             };
 
             match response {
-                TraceResponse::Received(response) => {
-                    let hop = Hop::Received(response.destination, response.ping);
-                    self.insert_response(response.ttl, hop);
+                TraceResponse::Received(ref _probe) => {
+                    self.insert_response(response);
                 }
-                TraceResponse::TimedOut(probe_sent) => {
-                    self.insert_response(probe_sent.ttl, Hop::TimedOut);
+                TraceResponse::TimedOut(ref _probe_sent) => {
+                    self.insert_response(response);
+                }
+                TraceResponse::Masked(_ttl) => {
+                  error!("Not how masked are usually received");
                 }
             };
         }
@@ -263,7 +276,7 @@ impl Iterator for Trace {
 }
 
 impl Stream for Trace {
-    type Item = Result<Vec<Hop>, TracerouteError>;
+    type Item = Result<Vec<TraceResponse>, TracerouteError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let result = match self.get_mut().next() {
