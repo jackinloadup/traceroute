@@ -237,7 +237,7 @@ impl fmt::Display for TraceData {
                             .join(" ");
 
                     if let Edge::TTL(ttl) = edge {
-                      writeln!(f, "{:?}: {} {}", ttl, hop, formatted_durations);
+                      writeln!(f, "{:>2}: {:<15} {}", ttl, replier, formatted_durations);
                     }
                 }
             }
