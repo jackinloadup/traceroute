@@ -38,7 +38,7 @@ pub struct Options {
     #[structopt(short = "T", long, default_value = "30")]
     pub max_ttl: u8,
     /// The inter-packet delay in milliseconds
-    #[structopt(short = "D", long, default_value = "10")]
+    #[structopt(short = "D", long, default_value = "5")]
     pub delay: u16,
     /// Output file name [default: stdout]
     #[structopt(short, long, parse(from_os_str))]

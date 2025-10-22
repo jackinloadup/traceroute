@@ -17,11 +17,10 @@ use crate::edge::Edge;
 use crate::node::Node;
 use async_std::task;
 use log::*;
-use options::Options;
+pub use options::Options;
 use std::io;
 use std::net::IpAddr;
 use structopt::StructOpt;
-use trace::TraceData;
 
 fn main() -> Result<(), io::Error> {
     let options = Options::from_args();
@@ -45,13 +44,7 @@ fn main() -> Result<(), io::Error> {
 }
 
 async fn app(options: Options) -> Result<(), TracerouteError> {
-
-    // Lock to ensure traceroute isn't running at the same time as another
-    let agent = Traceroute::new()?;
-
     let targets = options.target_ips()?;
-    // @TODO maybe a default source?
-    let source = agent.addresses().first().unwrap().clone();
 
     let Options {
         min_ttl,
@@ -64,6 +57,10 @@ async fn app(options: Options) -> Result<(), TracerouteError> {
         ..
     } = options;
 
+    // Lock to ensure traceroute isn't running at the same time as another
+    let agent = Traceroute::new(delay)?;
+
+
     let mut config = TraceOptions {
         min_ttl,
         max_ttl,
@@ -73,6 +70,9 @@ async fn app(options: Options) -> Result<(), TracerouteError> {
         protocol,
         dot,
     };
+
+    // @TODO maybe a default source?
+    let source = agent.addresses().first().unwrap().clone();
 
     // Fill in mask from options
     if let Some(mask) = mask {

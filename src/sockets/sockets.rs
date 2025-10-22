@@ -10,6 +10,7 @@ use std::any::Any;
 use std::net::{IpAddr, Ipv6Addr};
 use std::sync::Arc;
 use std::sync::mpsc::{Sender, channel};
+use std::time::Duration;
 use std::thread::{self, JoinHandle};
 
 pub type SocketJoinResult = Vec<Result<Result<(), TracerouteError>, Box<dyn Any + Send>>>;
@@ -24,10 +25,10 @@ pub struct Sockets {
 }
 
 impl Sockets {
-    pub fn new() -> Result<Self, TracerouteError> {
+    pub fn new(packet_delay: Duration) -> Result<Self, TracerouteError> {
         let runnable = Arc::new(AtomicBool::new(true));
 
-        let (mut tx, mut rx) = Self::setup_sockets()?;
+        let (mut tx, mut rx) = Self::setup_sockets(packet_delay)?;
         let addresses = tx.addresses();
         let (packet_sender, packet_receiver) = channel();
         let (probe_sender, probe_receiver) = channel();
@@ -61,14 +62,14 @@ impl Sockets {
         self.packet_sender.clone()
     }
 
-    fn setup_sockets() -> Result<(SocketSenders, SocketReceivers), TracerouteError> {
+    fn setup_sockets(packet_delay: Duration) -> Result<(SocketSenders, SocketReceivers), TracerouteError> {
         let ipv4_source = get_default_source_ip()?;
 
         // Set the protocol we are looking to recieve
         let protocol = Layer3(IpNextHeaderProtocols::Icmp);
         let mb_v4socket = transport_channel(4096, protocol).map(|(tx, rx)| {
             (
-                SocketSender::new(vec![ipv4_source], tx),
+                SocketSender::new(vec![ipv4_source], tx, packet_delay),
                 SocketReceiver::new(rx),
             )
         });

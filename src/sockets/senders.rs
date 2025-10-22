@@ -19,11 +19,12 @@ trait SocketSenderTrait<I, P> {
 pub struct SocketSender<I> {
     pub addresses: Vec<I>,
     tx: TransportSender,
+    packet_delay: Duration,
 }
 
 impl SocketSender<Ipv4Addr> {
-    pub fn new(addresses: Vec<Ipv4Addr>, tx: TransportSender) -> Self {
-        Self { addresses, tx }
+    pub fn new(addresses: Vec<Ipv4Addr>, tx: TransportSender, packet_delay: Duration) -> Self {
+        Self { addresses, tx, packet_delay }
     }
 }
 
@@ -65,11 +66,10 @@ impl SocketSenders {
         runnable: Arc<AtomicBool>,
     ) -> Result<(), TracerouteError> {
         while runnable.load(Ordering::SeqCst) {
-            let packet_delay = Duration::from_millis(5);
             let probe_request = match packet_receiver.try_recv() {
                 Ok(request) => request,
                 Err(TryRecvError::Empty) => {
-                    thread::sleep(packet_delay);
+                    thread::sleep(self.get_delay());
                     continue;
                 }
                 Err(TryRecvError::Disconnected) => break,
@@ -92,7 +92,7 @@ impl SocketSenders {
 
                             let dest = packet.get_destination();
 
-                            // thread::sleep(packet_delay);
+                            thread::sleep(self.get_delay());
 
                             self.send_packet(packet, dest)?;
                             Ok(probe.sent())
@@ -122,6 +122,16 @@ impl SocketSenders {
             }
         }
         Ok(())
+    }
+
+    fn get_delay(&self) -> Duration {
+        match *self {
+            Self::V4(ref socket) => socket.packet_delay,
+            Self::Both { ref v4, .. } => {
+                v4.packet_delay
+            }
+            Self::V6(ref socket) => socket.packet_delay,
+        }
     }
 }
 

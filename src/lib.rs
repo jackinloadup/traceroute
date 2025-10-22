@@ -16,7 +16,7 @@
 //! use async_std::stream::StreamExt;
 //! use async_std::task::block_on;
 //!
-//! let mut traceroute = Traceroute::new()?;
+//! let mut traceroute = Traceroute::new(5)?;
 //! let source = traceroute.addresses().first().unwrap().clone();
 //! let destination = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 //! let options = TraceOptions::default();

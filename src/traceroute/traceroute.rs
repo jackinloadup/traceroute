@@ -3,6 +3,7 @@ use crate::trace::{Trace, TraceOptions};
 use crate::traceroute::TracerouteError;
 use log::*;
 use std::net::IpAddr;
+use std::time::Duration;
 
 /// Interface to init the network and create [`Trace`s](Trace)
 ///
@@ -15,15 +16,15 @@ use std::net::IpAddr;
 // TODO bind/unbind interface?
 pub struct Traceroute {
     sockets: Sockets,
-    //queue: HashMap<u16, Probe>,
     //probes: HashMap<u16, Probe>,
     //streams: HashMap<u16, TraceActivity>,
 }
 
 impl Traceroute {
     /// Create a new traceroute engine
-    pub fn new() -> Result<Self, TracerouteError> {
-        let sockets = Sockets::new()?;
+    pub fn new(packet_delay: u16) -> Result<Self, TracerouteError> {
+        let packet_delay = Duration::from_millis(packet_delay as u64);
+        let sockets = Sockets::new(packet_delay)?;
 
         Ok(Self { sockets })
     }

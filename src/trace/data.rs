@@ -137,10 +137,10 @@ impl TraceData {
         // Add flow
         let new_node = self.graph.add_node(Node::Hop(destination));
 
-        // Maybe not a good idea. Can merge exact same ping times. Even if unlikely.
-        self.graph.add_edge(flow_node, new_node, Edge::RTT(ping));
-
         if track_flows {
+            // Maybe not a good idea. Can merge exact same ping times. Even if unlikely.
+            self.graph.add_edge(flow_node, new_node, Edge::RTT(ping));
+
             // connect node to flow
             self.graph.add_edge(flow_node, new_node, Edge::TTL(ttl));
         }
