@@ -128,10 +128,10 @@ impl Trace {
 
         let index: usize = (ttl - 1).into();
 
-        debug!("len {:?} index {:?}", self.queue.len(), index);
+        debug!("Probe response for index {:>2?}", index);
         let _ = match self.queue.get_mut(index) {
             Some(option) => option.insert(response),
-            None => todo!("queue isn't big enough"),
+            None => todo!("Queue isn't big enough"),
         };
     }
 

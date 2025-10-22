@@ -104,8 +104,4 @@ impl Options {
         );
         Ok(())
     }
-
-    pub fn get_masked(&self) -> Vec<u8> {
-        self.mask.to_owned().unwrap_or_default()
-    }
 }

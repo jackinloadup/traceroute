@@ -1,6 +1,6 @@
 use std::fmt;
 use std::net::IpAddr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use log::*;
 use crate::prelude::Flowhash;
@@ -44,7 +44,6 @@ impl TraceData {
         let track_flows = !self.options.dot;
 
         for trace in &mut traces {
-            //let trace = trace.timeout(Duration::from_millis(10));
             let responses = match StreamExt::next(trace).await {
                 Some(result) => result,
                 None => continue,
@@ -83,11 +82,10 @@ impl TraceData {
                 self.flows.push(flowhash);
 
                 self.graph.add_node(flow_node);
-               self.graph.add_edge(flow_node, source_node, Edge::TTL(0));
+                self.graph.add_edge(flow_node, source_node, Edge::TTL(0));
             }
 
             let mut prev_node = source_node;
-
 
             for response in iter {
                 prev_node = match response {
@@ -132,12 +130,15 @@ impl TraceData {
         let destination = resp.destination;
         let ping = resp.ping;
 
-        info!("{0} {1} {2:.3?}", ttl, destination, ping);
+        info!("{0:>2}. {1:<15} {2:.3?}", ttl, destination, ping);
 
         self.add_ping(source, destination, ping);
 
         // Add flow
         let new_node = self.graph.add_node(Node::Hop(destination));
+
+        // Maybe not a good idea. Can merge exact same ping times. Even if unlikely.
+        self.graph.add_edge(flow_node, new_node, Edge::RTT(ping));
 
         if track_flows {
             // connect node to flow
@@ -156,7 +157,6 @@ impl TraceData {
     // Add ping
     fn add_ping(&mut self, source: IpAddr, destination: IpAddr, ping: Duration) {
         let TraceOptions { max_ttl, ..} = self.options;
-        //let range = (0..=max_ttl).into_iter().map(Hop::new).collect();
         let key = (source, destination);
 
         match self.pings.get_mut(&key) {
@@ -195,50 +195,50 @@ impl fmt::Display for TraceData {
         }
 
         // Otherwise print the first flow
-        if let flow = self.flows[0] {
-            //self.graph.find(Node::Flow(flow));
-            let start_node = Node::Flow(flow);
+        let flow = self.flows[0];
 
-            if let mut edges = self.graph.edges_directed(start_node, Outgoing) {
-                let mut edges = edges.collect::<Vec<_>>();
-                // verify all nodes are in the right order
-                edges.sort_by(|(_,_,ttl1),(_,_,ttl2)| ttl1.cmp(ttl2));
+        let edges = self.graph.edges_directed(Node::Flow(flow), Outgoing);
+        let mut edges = edges.collect::<Vec<_>>();
 
-                let (_flow, source_hop, _edge) = edges[0];
-                let source = match source_hop {
-                    Node::Hop(ip) => ip,
-                    _ => return write!(f, ""),
-                };
+        // verify all nodes are in the right order
+        edges.sort_by(|(_,_,ttl1),(_,_,ttl2)| ttl1.cmp(ttl2));
 
-                // remove all hidden/timed out nodes at the end
-                loop {
-                    let pop = edges.pop_if(|(_,node,_)| {
-                        match node {
-                            Node::Hidden(_) => true,
-                            _ => false,
-                        }
-                    });
-                    match pop {
-                        Some(_) => continue,
-                        None => break,
-                    }
-                };
+        let (_flow, source_hop, _edge) = edges[0];
+        let source = match source_hop {
+            Node::Hop(ip) => ip,
+            _ => return write!(f, ""),
+        };
 
-                for (_flow, hop, edge) in edges {
-                    let replier = match hop {
-                        Node::Hop(ip) => ip,
-                        _ => continue,
-                    };
+        // remove all hidden/timed out nodes at the end
+        loop {
+            let pop = edges.pop_if(|(_,node,_)| {
+                match node {
+                    Node::Hidden(_) => true,
+                    _ => false,
+                }
+            });
+            match pop {
+                Some(_) => continue,
+                None => break,
+            }
+        };
 
-                    let formatted_durations = self.get_pings(source, replier)
-                            .iter()
-                            .map(|duration| format!("{:.2?}", duration))
-                            .collect::<Vec<String>>()
-                            .join(" ");
+        for (_flow, hop, edge) in edges {
+            let replier = match hop {
+                Node::Hop(ip) => ip,
+                _ => continue,
+            };
 
-                    if let Edge::TTL(ttl) = edge {
-                      writeln!(f, "{:>2}: {:<15} {}", ttl, replier, formatted_durations);
-                    }
+            let formatted_durations = self.get_pings(source, replier)
+                    .iter()
+                    .map(|duration| format!("{:.2?}", duration))
+                    .collect::<Vec<String>>()
+                    .join(" ");
+
+            if let Edge::TTL(ttl) = edge {
+                match writeln!(f, "{:>2}. {:<15} {}", ttl, replier, formatted_durations) {
+                    Ok(_) => continue,
+                    Err(err) => return Err(err),
                 }
             }
         }
@@ -246,49 +246,3 @@ impl fmt::Display for TraceData {
         Ok(())
     }
 }
-//impl fmt::Display for TraceData {
-//    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//        writeln!(f, "TraceData");
-//        self.pings
-//            .iter()
-//            .try_fold((), |index, ((_src,dest), pings)| writeln!(f, "{:?} {} {:.3?}",index, dest, pings.get(0).unwrap()))
-//    }
-//}
-
-//enum StreamTypes {
-//    Probe,
-//    Response,
-//    Err,
-//}
-//
-//fn test() {
-//    let traceroute = Traceroute::new();
-//    let trace = traceroute.trace_host(IpAddr::V4(Ipv4Addr::LOCALHOST));
-//    let graph = trace.to_graph();
-//
-//    let options = Options::new(target);
-//    let trace = traceroute.trace_with_options(options);
-//
-//    while let Some(activity) = trace.next().await {
-//        match activity {
-//            TraceActivty::Probe(probe) => todo!(),
-//            TraceActivty::Response(response) => todo!(),
-//        }
-//    }
-//}
-//
-//fn to_graph(self) -> Graph {
-//    let mut graph = Graph::new();
-//    //let probe = Hashmap<Probe,
-//
-//    while let Some(response) = self.next().await {
-//        match response {
-//            TraceActivty::Probe(probe) => todo!("store probe"),
-//            TraceActivty::Response(response) => {
-//                todo!("store response? or match here and store match?");
-//            }
-//        }
-//    }
-//
-//    todo!("Go through matches(hops) and put them into a graph");
-//

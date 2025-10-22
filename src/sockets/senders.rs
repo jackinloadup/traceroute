@@ -1,5 +1,4 @@
 use crate::TracerouteError;
-use crate::prelude::*;
 use crate::probe::{ProbeBundle, ProbeSent};
 use crate::trace::{TraceRequest, TraceSent};
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -100,11 +99,11 @@ impl SocketSenders {
                         })
                         .collect();
 
-                    debug!("finished sending packet bundle");
+                    debug!("Finished sending packet bundle");
 
                     match result {
                         Ok(probes) => {
-                            debug!("probes to send {}", probes.len());
+                            debug!("Probes to send {}", probes.len());
                             let sent = TraceSent {
                                 probes,
                                 timeout,
@@ -112,7 +111,7 @@ impl SocketSenders {
                             };
                             probe_sender.send(sent)?;
                         }
-                        Err(_err) => todo!("Recived an error"),
+                        Err(_err) => todo!("Received an error"),
                     }
                 }
                 TraceRequest::V6 {

@@ -18,5 +18,5 @@ pub type Flowhash = u16;
 
 pub use crate::protocol::Protocol;
 pub use crate::sockets::SocketJoinResult;
-pub use crate::trace::{Trace, TraceOptions};
+pub use crate::trace::{Trace, TraceOptions, TraceData};
 pub use crate::traceroute::{Traceroute, TracerouteError};

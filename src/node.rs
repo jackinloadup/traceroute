@@ -3,7 +3,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::net::IpAddr;
 
-use crate::prelude::{Checksum, Flowhash, TTL, TcpId};
+use crate::prelude::{Flowhash, TTL};
 
 /// Node in the graph
 #[derive(Copy, Clone, Debug)]
@@ -31,7 +31,7 @@ impl fmt::Display for Node {
         match self {
             Self::Flow(flowhash) => write!(f, "Flow #{:x?}", flowhash),
             Self::Hop(ip) => write!(f, "{}", ip),
-            Self::Hidden(_ttl) => write!(f, "Hidden"),
+            Self::Hidden(_ttl) => write!(f, "No Reply"),
             Self::Masked(_ttl) => write!(f, "Masked"),
         }
     }

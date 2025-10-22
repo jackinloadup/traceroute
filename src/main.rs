@@ -88,7 +88,7 @@ async fn app(options: Options) -> Result<(), TracerouteError> {
             IpAddr::V6(ip) => warn!("Skipped IPv6 target {}", ip),
         }
 
-        // break after the first trace if we are not performing a trace
+        // break after the first trace if we are not building a graph
         if !dot {
             break;
         }
@@ -109,27 +109,6 @@ async fn app(options: Options) -> Result<(), TracerouteError> {
             Ok(result)
         },
     }?;
-    //if let Some(file) = output_file {
-
-    //}
-    //println!("{}", data);
-
-    //}
-
-    // data structure for traceroute table data
-    // ttl - fixed size known by min-max_ttl in options
-    // masked hops are also known
-    // per ttl may be multiple hosts
-    // each host may have multiple probeResponses
 
     Ok(())
-    //info!("{}", results);
-
-    //match output_file {
-    //    None => io::stdout()
-    //        .lock()
-    //        .write_all(results.to_dot().as_bytes())
-    //        .map_err(TracerouteError::Io),
-    //    Some(file) => results.write(file),
-    //}?;
 }
