@@ -8,7 +8,7 @@ destination, unoptimal routing, and bad performance routers along the path.
 # Usage
 
 For **Nix** users
-```
+```console
 # jump into development shell with tools and environment setup
 nix develop
 
@@ -20,7 +20,7 @@ cargo run -- --graph yahoo.com | xdot -
 ```
 
 For general **linux** users
-```
+```console
 # command needs to sudo to receive ICMP packets
 export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = "sudo -E";
 
