@@ -7,7 +7,7 @@ destination, unoptimal routing, and bad performance routers along the path.
 
 # Usage
 
-For Nix users
+For **Nix** users
 ```
 # jump into development shell with tools and environment setup
 nix develop
@@ -19,7 +19,7 @@ cargo run -- yahoo.com
 cargo run -- --graph yahoo.com | xdot -
 ```
 
-For general linux users
+For general **linux** users
 ```
 # command needs to sudo to receive ICMP packets
 export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = "sudo -E";
@@ -30,15 +30,34 @@ cargo run -- yahoo.com
 # for a graph view
 cargo run -- --graph yahoo.com | xdot -
 ```
-
 ## Goals
-Use all known methods to discover the route/s to be taken by a packet to a target
-Deduce latency of hops and target.
-Use collected data to build directed graph of perceived network.
+ - [ ] Use all known methods to discover the route/s to be taken by a packet to a target
+ - [ ] Deduce latency of hops and target.
+ - [ ] Use collected data to build directed graph of perceived network.
+ - [ ] Panic free
+
 
 # Example Output
+## Single trace
+```console
+foo@bar:~$ cargo run -- yahoo.com
+ 0. 10.16.1.11      
+ 1. 10.16.1.1       [168.42µs]
+ 3. 173.219.221.188 [14.45ms]
+ 4. 173.219.224.90  [39.08ms]
+ 5. 173.219.201.108 [37.05ms]
+ 6. 208.115.136.16  [38.69ms]
+ 7. 209.191.68.3    [90.32ms]
+ 8. 209.191.65.107  [101.55ms]
+ 9. 66.196.67.101   [98.30ms]
+10. 67.195.4.99     [98.38ms]
+11. 68.180.235.4    [101.21ms]
+12. 67.195.34.71    [98.82ms]
+30. 98.137.11.163   [97.61ms, 96.73ms, 94.96ms, 99.98ms, 98.20ms, 96.97ms, 102.08ms, 99.89ms, 97.56ms, 102.58ms]
 ```
-cargo run -- --graph yahoo.com
+## Graph trace
+```console
+foo@bar:~$ cargo run -- --graph yahoo.com
 ```
 
 ```mermaid
@@ -127,6 +146,7 @@ graph TB
 38 --> 39
 39 --> 40
 ```
+
 
 ## Related Projects
 ### [dublin traceroute](https://github.com/insomniacslk/dublin-traceroute) [traceroute] [c++] [go]
