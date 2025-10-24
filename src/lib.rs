@@ -2,10 +2,13 @@
 //!
 //!  Determine path used by packets sent from self and destination.
 //!
-//!  It's important to note that we are only able to measure the path in a outgoing direction. Some
-//!  sections of the path may be the same in either direction but other sections may come back on a
-//!  completely different path without visibility. The return path for our probe may not be
-//!  along the same path it came causing oddities in the probe latency. We don't yet detect this.
+//!  <div class="warning">
+//!
+//!  It's important to note that the path we are measuring is only in the outgoing direction. The
+//!  packets from target back to the source may take a different path we can't measure from our
+//!  viewpoint. This can cause oddities in the probe latency.
+//!
+//!  </div>
 //!
 //! # Example
 //!

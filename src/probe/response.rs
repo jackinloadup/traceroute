@@ -5,7 +5,7 @@ use super::ProbeSent;
 
 use crate::prelude::TTL;
 
-/// Information received from the returned [`ProbeSent`](crate::probe::ProbeSent)
+/// Information received from the returned [`ProbeSent`]
 ///
 /// The response doesn't currently take into account the checksum of the sent probe vs the
 /// response. Also there is no attempt to inspect the payload of the probe sent. There is no
@@ -39,12 +39,3 @@ impl ProbeResponse {
         }
     }
 }
-
-//impl fmt::Display for ProbeResponse {
-//    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//        match self {
-//            Self::V4 { id, source, .. } => write!(f, "{}, {}", id, source),
-//            Self::V6 { id, source, .. } => write!(f, "{}, {}", id, source),
-//        }
-//    }
-//}

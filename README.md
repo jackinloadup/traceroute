@@ -1,9 +1,18 @@
 # Traceroute
 Network diagnostic tool to capture route and transit delay of packets.
 
-My motivation for building this was to explore oddities in internet routing.
+My motivation for building this is to explore oddities in internet routing.
 Specifically providers which send traffic through multiple routes for the same
 destination, unoptimal routing, and bad performance routers along the path.
+
+<div class="warning">
+
+It's important to note that the path is measured with this tool is only in the
+outgoing direction. The packets from target back to the source may take a
+different path not measurable from the source viewpoint. This can cause
+oddities in the probe latency.
+
+</div>
 
 # Usage
 
@@ -41,7 +50,7 @@ cargo run -- --graph yahoo.com | xdot -
 ## Single trace
 ```console
 foo@bar:~$ cargo run -- yahoo.com
- 0. 10.16.1.11      
+ 0. 10.16.1.11
  1. 10.16.1.1       [168.42µs]
  3. 173.219.221.188 [14.45ms]
  4. 173.219.224.90  [39.08ms]
@@ -149,16 +158,8 @@ graph TB
 
 
 ## Related Projects
-### [dublin traceroute](https://github.com/insomniacslk/dublin-traceroute) [traceroute] [c++] [go]
-Dublin Traceroute is a NAT-aware multipath traceroute
-
-### [traceroute-rs](https://github.com/daniellockyer/traceroute-rs) [traceroute] [rust]
-Traceroute implemented in ~165 lines of rust
-
-### [fastping-rs](https://github.com/bparli/fastping-rs) [ping] [rust]
-fastping-rs is a Rust ICMP ping library, inspired by [go-fastping](https://github.com/tatsushid/go-fastping)  and the [AnyEvent::FastPing Perl module](http://search.cpan.org/~mlehmann/AnyEvent-FastPing-2.01/), for quickly sending and measuring batches of ICMP ECHO REQUEST packets.
-
-### [libtraceroute](https://github.com/ilyagrishkov/libtraceroute) [traceroute] [rust]
-
-### [ping.rs](https://gist.github.com/nixpulvis/e2938d03d141990d99db) [ping] [rust]
-A simple Ping implementation in Rust. 83 lines of rust
+ - [Dublin Traceroute](https://github.com/insomniacslk/dublin-traceroute) is a NAT-aware multipath traceroute
+ - [traceroute-rs](https://github.com/daniellockyer/traceroute-rs) implemented in ~165 lines of rust
+ - [fastping-rs](https://github.com/bparli/fastping-rs) is a Rust ICMP ping library, inspired by [go-fastping](https://github.com/tatsushid/go-fastping)  and the [AnyEvent::FastPing Perl module](http://search.cpan.org/~mlehmann/AnyEvent-FastPing-2.01/), for quickly sending and measuring batches of ICMP ECHO REQUEST packets.
+ - [libtraceroute](https://github.com/ilyagrishkov/libtraceroute)
+ - [ping.rs](https://gist.github.com/nixpulvis/e2938d03d141990d99db) A simple Ping implementation in Rust. 83 lines of rust

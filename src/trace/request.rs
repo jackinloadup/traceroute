@@ -6,7 +6,7 @@ use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 /// Artifact created by [`Trace`](crate::trace::Trace) with the packets it wants to have sent and a channel to receive
-/// the [`TraceResult`](TraceResult)'s
+/// the [`TraceResult`]'s
 pub enum TraceRequest<'trace> {
     V4 {
         bundles: Vec<ProbeBundle<Ipv4Packet<'trace>>>,
